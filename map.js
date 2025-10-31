@@ -15,6 +15,7 @@ const suggestions = document.getElementById("suggestions");
 let activeInput = null;
 let startMarker = null;
 let destMarker = null;
+let routeLayer = null;
 
 // helper to add or update a marker for start/destination inputs
 function addOrUpdateMarker(lat, lon, inputId, label) {
@@ -73,6 +74,8 @@ async function fetchLocationSuggestions(query, inputElement) {
                 const lon = li.getAttribute('data-lon');
                 // fill the input and clear suggestions
                 activeInput.value = formatted;
+
+
                 // store coordinates on the input element for later use
                 activeInput.dataset.lat = lat;
                 activeInput.dataset.lon = lon;
@@ -100,7 +103,57 @@ destinationInput.addEventListener('input', debounce((e) => {
 
 //Creat a marker
 function onButtonClick(e) {
-    //add marker
-    L.marker([lat, lon]).addTo(map)
-    
+    // Read stored coordinates from inputs
+    const sLat = locationInput.dataset.lat;
+    const sLon = locationInput.dataset.lon;
+    const dLat = destinationInput.dataset.lat;
+    const dLon = destinationInput.dataset.lon;
+
+    if (!sLat || !sLon) {
+        console.error('Start coordinates not set. Please select a suggestion for Start Location.');
+        return;
+    }
+    if (!dLat || !dLon) {
+        console.error('Destination coordinates not set. Please select a suggestion for Destination.');
+        return;
+    }
+
+    // update markers for both inputs
+    addOrUpdateMarker(sLat, sLon, 'location', locationInput.value || 'Start');
+    addOrUpdateMarker(dLat, dLon, 'destination', destinationInput.value || 'Destination');
+
+    // build routing request (ask Geoapify for GeoJSON)
+    const fromWaypoint = [sLat, sLon];
+    const toWaypoint = [dLat, dLon];
+    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+
+    fetch(url)
+        .then(res => {
+            if (!res.ok) throw new Error('Routing request failed: ' + res.status);
+            return res.json();
+        })
+        .then(result => {
+            console.log('Routing result', result);
+            // remove previous route if any
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+                routeLayer = null;
+            }
+
+            // Add new route layer (result should be GeoJSON FeatureCollection)
+            routeLayer = L.geoJSON(result, {
+                style: () => ({ color: 'rgba(255, 4, 8, 0.7)', weight: 5 })
+            }).addTo(map);
+
+            // fit map to route
+            try {
+                map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
+            } catch (err) {
+                console.warn('Could not fit bounds to route:', err);
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching route:', err);
+        });
 }
+
