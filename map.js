@@ -13,7 +13,6 @@ const destinationInput = document.getElementById("destination");
 const suggestions = document.getElementById("suggestions");
 
 let activeInput = null;
-<<<<<<< HEAD
 let startMarker = null;
 let destMarker = null;
 
@@ -41,8 +40,6 @@ function addOrUpdateMarker(lat, lon, inputId, label) {
     }
     return null;
 }
-=======
->>>>>>> Map-creation
 
 //de bounce functinon
 function debounce(func, delay) {
@@ -72,7 +69,6 @@ async function fetchLocationSuggestions(query, inputElement) {
         suggestions.querySelectorAll('.suggestion-item').forEach(li => {
             li.addEventListener('click', () => {
                 const formatted = li.getAttribute('data-formatted');
-<<<<<<< HEAD
                 const lat = li.getAttribute('data-lat');
                 const lon = li.getAttribute('data-lon');
                 // fill the input and clear suggestions
@@ -83,13 +79,6 @@ async function fetchLocationSuggestions(query, inputElement) {
                 suggestions.innerHTML = "";
                 // add/update marker on the map for the active input
                 addOrUpdateMarker(lat, lon, activeInput.id, formatted);
-=======
-                activeInput.value = formatted;
-                suggestions.innerHTML = "";
-                // Optionally, you can store lat/lon for further use
-                const lat = li.getAttribute('data-lat');
-                const lon = li.getAttribute('data-lon');
->>>>>>> Map-creation
                 console.log("Selected:", formatted, "Latitude:", lat, "Longitude:", lon);
             });
         });
@@ -110,12 +99,8 @@ destinationInput.addEventListener('input', debounce((e) => {
 
 
 //Creat a marker
-<<<<<<< HEAD
 function onButtonClick(e) {
     //add marker
     L.marker([lat, lon]).addTo(map)
     
 }
-=======
-
->>>>>>> Map-creation
