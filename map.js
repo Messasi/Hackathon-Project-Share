@@ -186,16 +186,16 @@ function updateRouteColor(avgNumberofCrimes) {
 //Funciton to change the colour of the route based on crime data
 
 function getRouteColor(avgNumberofCrimes) {
-    if (avgNumberofCrimes === 0) {
+    if (avgNumberofCrimes < 2) {
         return 'rgba(17, 255, 0, 0.7)'; // Green
     } else if (avgNumberofCrimes < 3) {
-        return 'rgba(238, 255, 0, 0.7)'; // Yellow
-    } else if (avgNumberofCrimes < 6) {
-        return 'rgba(255, 157, 0, 0.7)'; // Orange
-    } else if (avgNumberofCrimes < 9) {
-        return 'rgba(255, 100, 0, 0.7)'; // Dark Orange
+        return 'rgba(255, 255, 36, 0.94)'; // Yellow
+    } else if (avgNumberofCrimes < 5) {
+        return 'rgba(255, 172, 39, 1)'; // Orange
+    } else if (avgNumberofCrimes < 7) {
+        return 'rgba(222, 96, 33, 0.8)'; // Dark Orange
     } else {
-        return 'rgba(255, 55, 0, 0.7)'; // Red
+        return 'rgba(255, 0, 0, 1)'; // Red
     }
 }
     
