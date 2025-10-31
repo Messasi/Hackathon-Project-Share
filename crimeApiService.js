@@ -4,7 +4,7 @@ async function _fetchCrimesAtLocation(lat, lng, date){
     return data
 }
 
-async function getCrimesAtLocation(lat, lng, crimeTimeframeMonths = 1){
+async function getCrimesAtLocation(lat, lng, crimeTimeframeMonths = 3){
 // assert: crimeTimeframe >= 1
     
     const promises = [];
@@ -31,4 +31,14 @@ async function getCrimesAtLocation(lat, lng, crimeTimeframeMonths = 1){
     console.log(`results = ${results}`)
 
     return results.flat();
+}
+
+function getCrimeColor(crimesNumber){
+    // green - 0, yellow - < 3, orange - < 6, red - >= 6 
+
+    if (crimesNumber == 0) {return "green"}
+    if (crimesNumber < 3) {return "yellow"}
+    if (crimesNumber < 6) {return "orange"}
+    if (crimesNumber >= 6) {return "red"}
+
 }
