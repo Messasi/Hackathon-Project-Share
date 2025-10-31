@@ -14,18 +14,16 @@
 		<form action="#">
 			<div class="mb-3 input-group">
 				<span class="input-group-text">Starting Point</span>
-				<input type="text" class="form-control" id="regEmail" placeholder="Nottingham Trent University, NG11 8PT" name="registerEmail" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
-				<div class="valid-feedback">Done</div>
+				<input type="text" class="form-control rounded-right" id="regEmail" placeholder="Nottingham Trent University, NG11 8PT" name="registerEmail" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
 			</div>
 			
 			<div class="mb-3 input-group">
 				<span class="input-group-text">Destination</span>
 				<input type="text" class="form-control" id="regFirstName" placeholder="London" name="registerFirstName" required>
-				<div class="valid-feedback">Done</div>
 			</div>
 
 			<div class="d-flex justify-content-center align-items-center">
-				<button type="submit" class="btn btn-primary mx-auto" onclick="validateForm(event)">Submit</button>
+				<button type="submit" class="btn btn-primary mx-auto rounded-pill" onclick="validateForm(event)">Submit</button>
 			</div>
 
 		</form> 
