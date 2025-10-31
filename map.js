@@ -157,3 +157,33 @@ function onButtonClick(e) {
         });
 }
 
+
+//Funciton to change the colour of the route based on crime data
+function changeRouteColor(crimeCount) {
+    switch(crimeCount){
+        case crimeCount == 0:
+            return  routeLayer = L.geoJSON(result, {
+                style: () => ({ color: 'rgba(17, 255, 0, 0.7)', weight: 5 })
+            }).addTo(map);
+        case crimeCount < 3:
+            return routeLayer = L.geoJSON(result, {
+                style: () => ({ color: 'rgba(238, 255, 0, 0.7)', weight: 5 })
+            }).addTo(map);;
+        case crimeCount < 6:
+            return routeLayer = L.geoJSON(result, {
+                style: () => ({ color: 'rgba(255, 157, 0, 0.7)', weight: 5 })
+            }).addTo(map);;
+        case crimeCount >= 9:
+            return routeLayer = L.geoJSON(result, {
+                style: () => ({ color: 'rgba(255, 55, 0, 0.7)', weight: 5 })
+            }).addTo(map);;  
+            default:
+                return routeLayer = L.geoJSON(result, {
+                    style: () => ({ color: 'rgba(34, 255, 0, 0.7)', weight: 5 })
+                }).addTo(map);;
+    };
+    
+
+}
+
+//function changeRouteColor(crimeCount) 
