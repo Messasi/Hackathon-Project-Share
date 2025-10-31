@@ -9,21 +9,23 @@
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-	<div class="bg-image"></div>
+	<div id="bg-image" class="bg-image"></div>
 	<div class= "d-flex mx-auto col-12 col-md-6 col-lg-4 justify-content-center align-items-center vh-100" id="startEnd">
 		<form action="#">
 			<div class="mb-3 input-group">
 				<span class="input-group-text">Starting Point</span>
 				<input type="text" class="form-control rounded-right" id="regEmail" placeholder="Nottingham Trent University, NG11 8PT" name="registerEmail" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
+				<!-- add the suggestions mechanic here-->
 			</div>
-			
+
 			<div class="mb-3 input-group">
 				<span class="input-group-text">Destination</span>
 				<input type="text" class="form-control" id="regFirstName" placeholder="London" name="registerFirstName" required>
+				<!-- add the suggestions mechanic here-->
 			</div>
 
 			<div class="d-flex justify-content-center align-items-center">
-				<button type="submit" class="btn btn-primary mx-auto rounded-pill" onclick="validateForm(event)">Submit</button>
+				<button type="submit" class="btn btn-primary mx-auto rounded-corners" onclick="validateForm(event)">Submit</button>
 			</div>
 
 		</form> 
