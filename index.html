@@ -11,21 +11,22 @@
 <body>
 	<div id="bg-image" class="bg-image"></div>
 	<div class= "d-flex mx-auto col-12 col-md-6 col-lg-4 justify-content-center align-items-center vh-100" id="startEnd">
-		<form action="#">
+		<script src="passon.js"></script>
+		<form id="location-form" onsubmit="passOn(event);">
 			<div class="mb-3 input-group">
 				<span class="input-group-text">Starting Point</span>
-				<input type="text" class="form-control rounded-right" id="regEmail" placeholder="Nottingham Trent University, NG11 8PT" name="registerEmail" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
+				<input type="text" class="form-control rounded-right" id="startPoint" placeholder="Nottingham Trent University, NG11 8PT" name="startPoint" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
 				<!-- add the suggestions mechanic here-->
 			</div>
 
 			<div class="mb-3 input-group">
 				<span class="input-group-text">Destination</span>
-				<input type="text" class="form-control" id="regFirstName" placeholder="London" name="registerFirstName" required>
+				<input type="text" class="form-control" id="destPoint" placeholder="London" name="destPoint" required>
 				<!-- add the suggestions mechanic here-->
 			</div>
 
 			<div class="d-flex justify-content-center align-items-center">
-				<button type="submit" class="btn btn-primary mx-auto rounded-corners" onclick="validateForm(event)">Submit</button>
+				<button type="submit" class="btn btn-primary mx-auto rounded-corners">Submit</button>
 			</div>
 
 		</form> 
