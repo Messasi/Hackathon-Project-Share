@@ -102,7 +102,7 @@ destinationInput.addEventListener('input', debounce((e) => {
 
 
 //Creat a marker
-function onButtonClick(e) {
+async function onButtonClick(e) {
     // Read stored coordinates from inputs
     const sLat = locationInput.dataset.lat;
     const sLon = locationInput.dataset.lon;
@@ -139,6 +139,8 @@ function onButtonClick(e) {
                 map.removeLayer(routeLayer);
                 routeLayer = null;
             }
+
+            getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0])
 
             // Add new route layer (result should be GeoJSON FeatureCollection)
             routeLayer = L.geoJSON(result, {
