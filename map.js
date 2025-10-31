@@ -1,10 +1,15 @@
 //Createing the map
 
+//Funciton to change the colour of the route based on crime data
+
+
 var map = L.map('map').setView([51.505, -0.09], 17);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 25 ,
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
+
+
 
 //Autofill location 
 const myAPIKey = "a941066835354227943419eb425fff6a";
@@ -126,6 +131,7 @@ function onButtonClick(e) {
     const fromWaypoint = [sLat, sLon];
     const toWaypoint = [dLat, dLon];
     const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+    let avgNumberofCrimes = null;
 
     fetch(url)
         .then(res => {
@@ -144,7 +150,9 @@ function onButtonClick(e) {
             routeLayer = L.geoJSON(result, {
                 style: () => ({ color: 'rgba(255, 4, 8, 0.7)', weight: 5 })
             }).addTo(map);
-
+            
+            avgNumberofCrimes = getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
+            changeRouteColor(avgNumberofCrimes);
             // fit map to route
             try {
                 map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
@@ -155,25 +163,25 @@ function onButtonClick(e) {
         .catch(err => {
             console.error('Error fetching route:', err);
         });
-}
 
 
 //Funciton to change the colour of the route based on crime data
-function changeRouteColor(crimeCount) {
-    switch(crimeCount){
-        case crimeCount == 0:
+
+function changeRouteColor(avgNumberofCrimes, result) {
+    switch(avgNumberofCrimes){
+        case avgNumberofCrimes == 0:
             return  routeLayer = L.geoJSON(result, {
                 style: () => ({ color: 'rgba(17, 255, 0, 0.7)', weight: 5 })
             }).addTo(map);
-        case crimeCount < 3:
+        case avgNumberofCrimes < 3:
             return routeLayer = L.geoJSON(result, {
                 style: () => ({ color: 'rgba(238, 255, 0, 0.7)', weight: 5 })
             }).addTo(map);;
-        case crimeCount < 6:
+        case avgNumberofCrimes < 6:
             return routeLayer = L.geoJSON(result, {
                 style: () => ({ color: 'rgba(255, 157, 0, 0.7)', weight: 5 })
             }).addTo(map);;
-        case crimeCount >= 9:
+        case avgNumberofCrimes >= 9:
             return routeLayer = L.geoJSON(result, {
                 style: () => ({ color: 'rgba(255, 55, 0, 0.7)', weight: 5 })
             }).addTo(map);;  
@@ -186,4 +194,7 @@ function changeRouteColor(crimeCount) {
 
 }
 
-//function changeRouteColor(crimeCount) 
+}
+
+
+
