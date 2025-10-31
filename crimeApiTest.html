@@ -26,7 +26,7 @@
         document.getElementById('testButton').addEventListener('click', async () => {
             const lat = parseFloat(document.getElementById('lat').value);
             const lng = parseFloat(document.getElementById('lng').value);
-            const crimeTimeframeMonths = 3; // How many months of data to fetch
+            const crimeTimeframeMonths = 2; // How many months of data to fetch
             
             console.log(`Fetching data for lat: ${lat}, lng: ${lng}, timeframe: ${crimeTimeframeMonths} months`);
             document.getElementById('results').innerText = 'Fetching...';
