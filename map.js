@@ -1,10 +1,15 @@
 //Createing the map
 
+//Funciton to change the colour of the route based on crime data
+
+
 var map = L.map('map').setView([51.505, -0.09], 17);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 25 ,
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
+
+
 
 //Autofill location 
 const myAPIKey = "a941066835354227943419eb425fff6a";
@@ -126,13 +131,14 @@ async function onButtonClick(e) {
     const fromWaypoint = [sLat, sLon];
     const toWaypoint = [dLat, dLon];
     const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+    let avgNumberofCrimes = null;
 
     fetch(url)
         .then(res => {
             if (!res.ok) throw new Error('Routing request failed: ' + res.status);
             return res.json();
         })
-        .then(result => {
+        .then(async function(result) {
             console.log('Routing result', result);
             // remove previous route if any
             if (routeLayer) {
@@ -144,18 +150,61 @@ async function onButtonClick(e) {
 
             // Add new route layer (result should be GeoJSON FeatureCollection)
             routeLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(255, 4, 8, 0.7)', weight: 5 })
+                style: () => ({ color: 'rgba(128, 128, 128, 0.7)', weight: 5 })
             }).addTo(map);
 
-            // fit map to route
+             // fit map to route
             try {
                 map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
             } catch (err) {
                 console.warn('Could not fit bounds to route:', err);
             }
+            
+           const avgNumberofCrimes = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
+        
+
+            updateRouteColor(avgNumberofCrimes);
+
+           
         })
         .catch(err => {
             console.error('Error fetching route:', err);
         });
+//Update the route colour based on crime data
+function updateRouteColor(avgNumberofCrimes) {
+    if (!routeLayer) return; {
+
+    const colour = getRouteColor(avgNumberofCrimes);
+
+    routeLayer.eachLayer(layer => {
+        if (layer.setStyle){
+            layer.setStyle({ color: colour });
+        }
+    });
 }
+}
+
+
+//Funciton to change the colour of the route based on crime data
+
+function getRouteColor(avgNumberofCrimes) {
+    if (avgNumberofCrimes === 0) {
+        return 'rgba(17, 255, 0, 0.7)'; // Green
+    } else if (avgNumberofCrimes < 3) {
+        return 'rgba(238, 255, 0, 0.7)'; // Yellow
+    } else if (avgNumberofCrimes < 6) {
+        return 'rgba(255, 157, 0, 0.7)'; // Orange
+    } else if (avgNumberofCrimes < 9) {
+        return 'rgba(255, 100, 0, 0.7)'; // Dark Orange
+    } else {
+        return 'rgba(255, 55, 0, 0.7)'; // Red
+    }
+}
+    
+
+}
+
+
+
+
 
