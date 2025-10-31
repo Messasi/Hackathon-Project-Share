@@ -102,4 +102,5 @@ destinationInput.addEventListener('input', debounce((e) => {
 function onButtonClick(e) {
     //add marker
     L.marker([lat, lon]).addTo(map)
+    
 }
