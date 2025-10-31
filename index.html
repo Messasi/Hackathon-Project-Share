@@ -10,10 +10,22 @@
 </head>
 <body>
 	<div id="startEnd">
-		<h1>Simon Says!</h1>
-		<p>Number of rows:
-		<input type="text" name="numRows1" size="15" maxlength="30" value = "2" id= "numRows"/>
-		</p>
+		<form action="#" class="was-validated">
+			<div class="mb-3 input-group">
+				<span class="input-group-text">Starting Point</span>
+				<input type="email" class="form-control" id="regEmail" placeholder="JohnDoe@anonmail.com" name="registerEmail" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
+				<div class="valid-feedback">Done</div>
+				<div class="invalid-feedback">Please fill out this field.</div>
+				</div>
+			<div class="mb-3 input-group">
+				<span class="input-group-text">Destination</span>
+				<input type="text" class="form-control" id="regFirstName" placeholder="John" name="registerFirstName" required>
+				<div class="valid-feedback">Done</div>
+				<div class="invalid-feedback">Please fill out this field.</div>
+				</div>
+			<button type="submit" class="btn btn-primary" onclick="validateForm(event)">Submit</button>
+			
+		</form> 
 	</div>
 </body>
 </html>
