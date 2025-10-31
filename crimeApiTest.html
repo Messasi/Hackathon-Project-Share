@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crime API Test</title>
+</head>
+<body>
+    <h1>Crime API Test</h1>
+    <p>Open the browser's developer console (F12) to see the output.</p>
+    
+    <div>
+        <label for="lat">Latitude:</label>
+        <input type="text" id="lat" value="52.629729">
+    </div>
+    <div>
+        <label for="lng">Longitude:</label>
+        <input type="text" id="lng" value="-1.131592">
+    </div>
+
+    <button id="testButton">Fetch Crime Data</button>
+    <div id="results"></div>
+
+    <script src="crimeApiService.js"></script>
+    <script>
+        document.getElementById('testButton').addEventListener('click', async () => {
+            const lat = parseFloat(document.getElementById('lat').value);
+            const lng = parseFloat(document.getElementById('lng').value);
+            const crimeTimeframeMonths = 2; // How many months of data to fetch
+            
+            console.log(`Fetching data for lat: ${lat}, lng: ${lng}, timeframe: ${crimeTimeframeMonths} months`);
+            document.getElementById('results').innerText = 'Fetching...';
+
+            try {
+                const crimeData = await getCrimesAtLocation(lat, lng, crimeTimeframeMonths);
+                const color = getCrimeColor(crimeData.length)
+                console.log('Data received:', crimeData);
+                document.getElementById('results').innerText = `number of crimes: ${crimeData.length}\n\ncolor: ${color}\n\n${JSON.stringify(crimeData, null, 2)}`
+            } catch (error) {
+                console.error('Error fetching crime data:', error);
+                document.getElementById('results').innerText = 'An error occurred. Check the console.';
+            }
+        });
+    </script>
+</body>
+</html>
