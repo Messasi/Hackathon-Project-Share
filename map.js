@@ -107,7 +107,7 @@ destinationInput.addEventListener('input', debounce((e) => {
 
 
 //Creat a marker
-function onButtonClick(e) {
+async function onButtonClick(e) {
     // Read stored coordinates from inputs
     const sLat = locationInput.dataset.lat;
     const sLon = locationInput.dataset.lon;
@@ -138,7 +138,7 @@ function onButtonClick(e) {
             if (!res.ok) throw new Error('Routing request failed: ' + res.status);
             return res.json();
         })
-        .then(result => {
+        .then(async function(result) {
             console.log('Routing result', result);
             // remove previous route if any
             if (routeLayer) {
@@ -148,53 +148,61 @@ function onButtonClick(e) {
 
             // Add new route layer (result should be GeoJSON FeatureCollection)
             routeLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(255, 4, 8, 0.7)', weight: 5 })
+                style: () => ({ color: 'rgba(128, 128, 128, 0.7)', weight: 5 })
             }).addTo(map);
-            
-            avgNumberofCrimes = getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
-            changeRouteColor(avgNumberofCrimes);
-            // fit map to route
+
+             // fit map to route
             try {
                 map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
             } catch (err) {
                 console.warn('Could not fit bounds to route:', err);
             }
+            
+           const avgNumberofCrimes = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
+        
+
+            updateRouteColor(avgNumberofCrimes);
+
+           
         })
         .catch(err => {
             console.error('Error fetching route:', err);
         });
+//Update the route colour based on crime data
+function updateRouteColor(avgNumberofCrimes) {
+    if (!routeLayer) return; {
+
+    const colour = getRouteColor(avgNumberofCrimes);
+
+    routeLayer.eachLayer(layer => {
+        if (layer.setStyle){
+            layer.setStyle({ color: colour });
+        }
+    });
+}
+}
 
 
 //Funciton to change the colour of the route based on crime data
 
-function changeRouteColor(avgNumberofCrimes, result) {
-    switch(avgNumberofCrimes){
-        case avgNumberofCrimes == 0:
-            return  routeLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(17, 255, 0, 0.7)', weight: 5 })
-            }).addTo(map);
-        case avgNumberofCrimes < 3:
-            return routeLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(238, 255, 0, 0.7)', weight: 5 })
-            }).addTo(map);;
-        case avgNumberofCrimes < 6:
-            return routeLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(255, 157, 0, 0.7)', weight: 5 })
-            }).addTo(map);;
-        case avgNumberofCrimes >= 9:
-            return routeLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(255, 55, 0, 0.7)', weight: 5 })
-            }).addTo(map);;  
-            default:
-                return routeLayer = L.geoJSON(result, {
-                    style: () => ({ color: 'rgba(34, 255, 0, 0.7)', weight: 5 })
-                }).addTo(map);;
-    };
+function getRouteColor(avgNumberofCrimes) {
+    if (avgNumberofCrimes === 0) {
+        return 'rgba(17, 255, 0, 0.7)'; // Green
+    } else if (avgNumberofCrimes < 3) {
+        return 'rgba(238, 255, 0, 0.7)'; // Yellow
+    } else if (avgNumberofCrimes < 6) {
+        return 'rgba(255, 157, 0, 0.7)'; // Orange
+    } else if (avgNumberofCrimes < 9) {
+        return 'rgba(255, 100, 0, 0.7)'; // Dark Orange
+    } else {
+        return 'rgba(255, 55, 0, 0.7)'; // Red
+    }
+}
     
 
 }
 
-}
+
 
 
 
