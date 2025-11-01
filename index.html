@@ -11,6 +11,10 @@
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body id="map">
+    <!-- Back button (top-left) - hidden until a route is shown -->
+    <div class= "d-flex justify-content-center align-items-center col-1 vh-100" style="position:fixed; z-index: 999;">
+        <button id="backBtn" class="btn btn-secondary rounded-circle" hidden onclick="onBackClick();">&#8592;</button>
+    </div>
     
     <!-- Header Section -->
     <div class="input-section">
@@ -24,7 +28,7 @@
         </div>
     </div>
 
-        <div class= "d-flex justify-content-center align-items-center vh-100 mx-auto col-12 col-md-6 col-lg-4 vh-100" style="position:fixed; z-index: 1000;"  id="startEnd">
+    <div class= "d-flex justify-content-center align-items-center mx-auto col-12 col-md-6 col-lg-4 vh-100" style="position:fixed; z-index: 999;"  id="startEnd">
         <div class="bg-body shadow-lg p-5 rounded">
             <form class="" id="location-form" onsubmit="onButtonClick();">
                 <div class="mb-3 input-group" style="position:relative;">
@@ -41,16 +45,57 @@
                 </div>
             </form>
                 <div>  
-                    <button id="getRouteBtn" onclick="onButtonClick()">Get Safe Route</button>
+                    <div id="modeControls" class="mb-3">
+                        <label class="form-label"><strong>Mode</strong></label>
+                        <div class="mode-group">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mode" value="drive" id="modeDriving" checked>
+                                <label class="form-check-label" for="modeDriving">Driving</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mode" value="foot" id="modeWalking">
+                                <label class="form-check-label" for="modeWalking">Walking</label>
+                            </div>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="onlyGreen">
+                            <label class="form-check-label" for="onlyGreen">Only use green routes</label>
+                        </div>
+                    </div>
+                    <button id="getRouteBtn" onclick="onButtonClick();">Get Safe Route</button>
                 </div> 
+            </div>
         </div>
     </div>
 
-
-
-
-
-
+<div class="d-flex justify-content-end align-items-end mt-5">
+    <div id="legend" class="d-flex flex-column visibility-toggle" hidden style="position:fixed; z-index: 998;">
+        <div class="shadow-lg p-2 mb-3 bg-body rounded">  
+        <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Legend</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="border-end bg-danger">Red</td>
+                <td>Severe danger</td>
+            </tr>
+            <tr>
+                <td class="border-end bg-warning">Amber</td>
+                <td>Moderate danger</td>
+            </tr>
+            <tr>
+                <td class="border-end bg-success">Green</td>
+                <td>Safe to travel</td>
+            </tr>
+        </tbody>
+        </table>
+        </div>
+    </div>
+</div>
 
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

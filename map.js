@@ -231,6 +231,52 @@ async function onButtonClick(e) {
         return;
     }
 
+    var legend = document.getElementById("legend");
+    if (legend) {
+        // remove the CSS class if present (keeps backward compatibility)
+        if (legend.classList && legend.classList.contains("visibility-toggle")) {
+            legend.classList.remove("visibility-toggle");
+        }
+        // remove any hidden attribute so the legend becomes visible
+        try { legend.hidden = false; } catch (e) { /* ignore if not writable */ }
+    }
+
+    // hide the input/start-destination overlay so the map and legend can take focus
+    var startEnd = document.getElementById('startEnd');
+    if (startEnd) {
+        try {
+            // add the visibility class (CSS will ensure it's hidden even with Bootstrap)
+            if (startEnd.classList && !startEnd.classList.contains('visibility-toggle')) {
+                startEnd.classList.add('visibility-toggle');
+            }
+            // also set the hidden attribute as a DOM-level guard
+            startEnd.hidden = true;
+        } catch (e) {
+            // best-effort: if setting hidden fails, leave it — nothing fatal
+            console.warn('Could not hide startEnd overlay', e);
+        }
+    }
+
+    // show the Back button (top-left) so the user can return to the input overlay
+    var backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+        try { backBtn.hidden = false; } catch (e) { /* ignore */ }
+    }
+
+    // Read transport mode checkboxes. The UI uses checkboxes but only one should be selected
+    // (we enforce that via JS listeners added below). Default to driving.
+    let mode = 'drive';
+    try {
+        const driving = document.getElementById('modeDriving');
+        const walking = document.getElementById('modeWalking');
+        if (walking && walking.checked) mode = 'foot';
+        else if (driving && driving.checked) mode = 'drive';
+    } catch (err) { console.warn('Could not read mode controls', err); }
+
+    // Read 'only green' preference
+    let onlyGreen = false;
+    try { const g = document.getElementById('onlyGreen'); if (g && g.checked) onlyGreen = true; } catch (e) {}
+
     const sLat = startEl.dataset.lat;
     const sLon = startEl.dataset.lon;
     const dLat = destEl.dataset.lat;
@@ -244,15 +290,22 @@ async function onButtonClick(e) {
 
     const fromWaypoint = [sLat, sLon];
     const toWaypoint = [dLat, dLon];
-    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+    // Use selected transport mode for routing request. If 'pt' is selected and the API
+    // doesn't support it, the request may fail — fallback behavior could be added later.
+    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=${encodeURIComponent(mode)}&format=geojson&apiKey=${myAPIKey}`;
 
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('Routing request failed');
         const geojson = await res.json();
         if (routeLayer) map.removeLayer(routeLayer);
+        // If user requested "only green" preferencing, draw route in green color.
+        // NOTE: this does not re-route around non-green segments; implementing
+        // route-avoidance requires analyzing segment crime scores and requesting
+        // alternate routes from the routing provider.
+        const routeColor = onlyGreen ? getRouteColor(0) : '#3388ff';
         routeLayer = L.geoJSON(geojson, {
-            style: { color: '#3388ff', weight: 6, opacity: 0.8 }
+            style: { color: routeColor, weight: 6, opacity: 0.8 }
         }).addTo(map);
         map.fitBounds(routeLayer.getBounds(), { padding: [50,50] });
     } catch (err) {
@@ -263,6 +316,40 @@ async function onButtonClick(e) {
 
 // expose onButtonClick globally if index.html expects that name
 window.onButtonClick = onButtonClick;
+
+// called when the user clicks the Back button in the top-left
+function onBackClick(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    var legend = document.getElementById('legend');
+    if (legend) {
+        // hide legend again
+        try {
+            if (legend.classList && !legend.classList.contains('visibility-toggle')) {
+                legend.classList.add('visibility-toggle');
+            }
+            legend.hidden = true;
+        } catch (err) { /* ignore */ }
+    }
+
+    var startEnd = document.getElementById('startEnd');
+    if (startEnd) {
+        try {
+            // show the overlay
+            if (startEnd.classList && startEnd.classList.contains('visibility-toggle')) {
+                startEnd.classList.remove('visibility-toggle');
+            }
+            startEnd.hidden = false;
+        } catch (err) { /* ignore */ }
+    }
+
+    var backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+        try { backBtn.hidden = true; } catch (e) { /* ignore */ }
+    }
+}
+
+window.onBackClick = onBackClick;
 
 // helper: get color based on avg crime (kept from previous file if used elsewhere)
 function getRouteColor(avgNumberofCrimes) {
