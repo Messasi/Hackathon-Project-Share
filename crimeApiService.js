@@ -11,12 +11,14 @@ async function getCrimesAtLocation(lat, lng, crimeTimeframeMonths = 3){
     const today = new Date();
     today.setDate(1) // so that the month subtracts correctly
 
+    //Create pop up for most amount of crimes 
+
 
     for (let i = 1; i <= crimeTimeframeMonths; i++) {
         console.log(`i = ${i}`)
 
         const targetDate = new Date(today);
-        targetDate.setMonth(today.getMonth() - i);
+        targetDate.setMonth(today.getMonth() - i-1);
 
         const year = targetDate.getFullYear();
         const month = String(targetDate.getMonth() + 1).padStart(2, '0');
@@ -33,12 +35,4 @@ async function getCrimesAtLocation(lat, lng, crimeTimeframeMonths = 3){
     return results.flat();
 }
 
-function getCrimeColor(crimesNumber){
-    // green - 0, yellow - < 3, orange - < 6, red - >= 6 
 
-    if (crimesNumber == 0) {return "green"}
-    if (crimesNumber < 3) {return "yellow"}
-    if (crimesNumber < 6) {return "orange"}
-    if (crimesNumber >= 6) {return "red"}
-
-}
