@@ -22,160 +22,400 @@ body{
    color: black;
 }
 
-.input-section{
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* Modern Input Section */
+.input-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    margin-bottom: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+}
+
+.input-section:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* Input Groups */
+.input-group {
     margin-bottom: 20px;
+    position: relative;
 }
 
-.input-group{
-    margin-bottom: 15px;
-}
-
-.input-group label{
+.input-group label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     font-weight: 600;
-    color: #555;
+    color: #2c3e50;
+    font-size: 14px;
+    letter-spacing: 0.3px;
+    transition: color 0.2s ease;
 }
 
-.input-group input{
+.input-group input {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 14px 16px;
+    border: 2px solid #e1e8ed;
+    border-radius: 10px;
+    font-size: 15px;
+    color: #2c3e50;
+    background: #ffffff;
+    transition: all 0.3s ease;
+    outline: none;
 }
 
-button{
+.input-group input:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
+    background: #ffffff;
+}
+
+.input-group input:hover {
+    border-color: #c5d5e0;
+}
+
+.input-group input::placeholder {
+    color: #95a5a6;
+}
+
+/* Modern Button Styling */
+button {
     width: 100%;
-    padding: 12px;
-    background: #4CAF50;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
 }
 
-button:hover{
-    background: #45a049;
+button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
 }
 
-#map { height: 70%; width: 100%;}
+button:hover::before {
+    left: 100%;
+}
 
+button:hover {
+    background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+}
+
+button:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Map Styling */
+#map {
+    height: 70%;
+    width: 100%;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+}
+
+/* Visibility Toggle */
 .visibility-toggle {
-    display:none !important;
+    display: none !important;
 }
 
-/* Make the legend hide rule more specific so Bootstrap's utility classes (e.g. .d-flex)
-   which may include !important do not override it. Target by ID + class to increase
-   specificity. */
 #legend.visibility-toggle {
     display: none !important;
 }
 
-/* Make the start/destination overlay hide rule similarly specific so Bootstrap's
-   utility classes (e.g. .d-flex) won't override it. */
 #startEnd.visibility-toggle {
     display: none !important;
 }
 
-/* Back button circle styling */
+/* Modern Back Button */
 #backBtn {
-    /* Responsive circular back button
-       - width/height use clamp(min, preferred, max) so the button scales with viewport
-       - rem units keep scaling consistent with user's font-size preferences
-       - font-size scales similarly so the arrow stays proportional */
-    width: clamp(2.5rem, 4.0vw, 4rem);
-    height: clamp(2.5rem, 4.0vw, 4rem);
+    width: clamp(2.8rem, 4.5vw, 4.5rem);
+    height: clamp(2.8rem, 4.5vw, 4.5rem);
     padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    font-size: clamp(1rem, 1.6vw, 1.6rem);
+    font-size: clamp(1.2rem, 1.8vw, 1.8rem);
     line-height: 1;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    transition: all 0.3s ease;
+    border: 3px solid rgba(255, 255, 255, 0.9);
 }
 
+#backBtn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+#backBtn:active {
+    transform: scale(0.95);
+}
+
+/* Modern Suggestions List */
 .suggestions-list {
     position: absolute;
-    margin-top: 6px;
+    margin-top: 8px;
     left: 0;
     right: 0;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    max-height: 200px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    max-height: 240px;
     overflow-y: auto;
     list-style: none;
-    padding: 6px 0;
+    padding: 8px;
     z-index: 2000;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.12);
-    /* start hidden by default so empty boxes do not appear after reload */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     display: none;
     opacity: 0;
-    transition: opacity 150ms ease-in-out;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
 }
 
-.suggestion-item {
-    padding: 8px 12px;
-    cursor: pointer;
-}
-.suggestion-item:hover {
-    background: #f1f1f1;
-}
-
-/* when JS shows the list it should set display:block and then opacity to 1; helper class */
 .suggestions-list.visible {
     display: block;
     opacity: 1;
+    transform: translateY(0);
 }
 
-/* Make the mode checkboxes compact and limit their max width so they don't stretch full-width */
+/* Custom Scrollbar for Suggestions */
+.suggestions-list::-webkit-scrollbar {
+    width: 6px;
+}
 
+.suggestions-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.suggestions-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}
+
+.suggestions-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.suggestion-item {
+    padding: 12px 14px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    color: #2c3e50;
+}
+
+.suggestion-item:hover {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(69, 160, 73, 0.1) 100%);
+    transform: translateX(4px);
+    color: #4CAF50;
+}
+
+/* Modern Mode Controls */
 #modeControls {
-    /* stack label above controls */
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    max-width: clamp(18rem, 45vw, 36rem); /* responsive max width */
+    gap: 16px;
+    max-width: clamp(20rem, 50vw, 40rem);
+    background: rgba(247, 249, 252, 0.6);
+    backdrop-filter: blur(5px);
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
 }
 
-/* mode-group holds the radio buttons on a single row (wraps on small screens) */
+#modeControls > label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+}
+
+/* Mode Group - Radio Buttons */
 .mode-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1rem;
+    gap: 12px;
     align-items: center;
 }
 
 #modeControls .form-check {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    margin: 0; /* remove default vertical spacing so they sit compact */
+    gap: 8px;
+    margin: 0;
+    padding: 10px 16px;
+    background: white;
+    border-radius: 10px;
+    border: 2px solid #e1e8ed;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-/* make labels for the small controls take only needed space */
+#modeControls .form-check:hover {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
 #modeControls .form-check-label {
     white-space: nowrap;
+    font-weight: 500;
+    color: #34495e;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
 }
 
-/* Ensure radio inputs keep their native circular appearance and reasonable size
-   (override any accidental inherited input sizing). */
+/* Custom Radio Button Styling */
 #modeControls .form-check-input {
-    /* set to typical radio size but responsive */
-    width: 1.15em;
-    height: 1.15em;
+    width: 20px;
+    height: 20px;
     padding: 0;
     margin: 0;
-    vertical-align: middle;
-    -webkit-appearance: radio;
-    appearance: radio;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid #cbd5e0;
     border-radius: 50%;
+    background: white;
+    position: relative;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+#modeControls .form-check-input:hover {
+    border-color: #4CAF50;
+}
+
+#modeControls .form-check-input:checked {
+    border-color: #4CAF50;
+    background: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+#modeControls .form-check-input:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+}
+
+/* When a radio is checked, highlight its container */
+#modeControls .form-check:has(.form-check-input:checked) {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.1);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+/* Checkbox Styling (for avoid crimes) */
+#modeControls input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid #cbd5e0;
+    border-radius: 6px;
+    background: white;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+#modeControls input[type="checkbox"]:hover {
+    border-color: #4CAF50;
+}
+
+#modeControls input[type="checkbox"]:checked {
+    border-color: #4CAF50;
+    background: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+#modeControls input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .input-section {
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .input-group input {
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+    
+    button {
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+    
+    #modeControls {
+        padding: 14px;
+    }
+    
+    .mode-group {
+        gap: 8px;
+    }
+    
+    #modeControls .form-check {
+        padding: 8px 12px;
+    }
+}
+
+/* Focus States for Accessibility */
+.input-group input:focus-visible,
+button:focus-visible,
+#modeControls .form-check-input:focus-visible {
+    outline: 3px solid rgba(76, 175, 80, 0.4);
+    outline-offset: 2px;
 }
 
 /* Keep label text next to the radio and prevent overflow */
