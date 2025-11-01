@@ -1,11 +1,4 @@
 //Createing the map
-
-//Funciton to change the colour of the route based on crime data
-
-//Createing the map
-
-//Function to change the colour of the route based on crime data
-
 var map = L.map('map').setView([51.505, -0.09], 17);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 25 ,
@@ -13,23 +6,12 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 
-// const myAPIKey = "a941066835354227943419eb425fff6a";
-const myAPIKey = "ad3d896b9b544b6a99f430b985dd0406"
-const locationInput = document.getElementById("location");
-const destinationInput = document.getElementById("destination");
-const suggestions = document.getElementById("suggestions");
-
-const avoidCrimes = false;
-
-let activeInput = null;
-
-//Autofill location 
-// const myAPIKey = "a941066835354227943419eb425fff6a";
+const myAPIKey = "ad3d896b9b544b6a99f430b985dd0406";
 // support both sets of ids: overlay (startPoint/destPoint) and header (location/destination)
 const inputSelectors = ['#startPoint', '#destPoint', '#location', '#destination'];
 const inputs = Array.from(document.querySelectorAll(inputSelectors.join(',')));
 
-// ensure any existing suggestion ULs are hidden on initial load (covers explicit ULs in HTML)
+// ensure any existing suggestion ULs are hidden on initial load
 inputs.forEach(i => {
     if (!i.id) return;
     const existing = document.getElementById(`${i.id}-suggestions`);
@@ -38,14 +20,16 @@ inputs.forEach(i => {
     }
 });
 
+// --- Global Layer and Marker Variables ---
 let startMarker = null;
 let destMarker = null;
 let routeLayer = null;
 let safeRouteLayer = null;
-let circlesLayer = L.layerGroup().addTo(map);
-let safeCirclesLayer = L.layerGroup().addTo(map);
+let circlesLayer = null;
+let safeCirclesLayer = null;
 
-// helper to add or update a marker for start/destination inputs
+// --- UI and Autocomplete Functions (from Merged Version) ---
+
 function roleFromId(id) {
     if (!id) return null;
     const lower = id.toLowerCase();
@@ -64,8 +48,7 @@ function addOrUpdateMarker(lat, lon, inputEl, label) {
 
     if (role === 'start') {
         if (startMarker) {
-            startMarker.setLatLng([latNum, lonNum]);
-            startMarker.setPopupContent(label || 'Start');
+            startMarker.setLatLng([latNum, lonNum]).setPopupContent(label || 'Start');
         } else {
             startMarker = L.marker([latNum, lonNum]).addTo(map).bindPopup(label || 'Start').openPopup();
         }
@@ -73,8 +56,7 @@ function addOrUpdateMarker(lat, lon, inputEl, label) {
         return startMarker;
     } else if (role === 'destination') {
         if (destMarker) {
-            destMarker.setLatLng([latNum, lonNum]);
-            destMarker.setPopupContent(label || 'Destination');
+            destMarker.setLatLng([latNum, lonNum]).setPopupContent(label || 'Destination');
         } else {
             destMarker = L.marker([latNum, lonNum]).addTo(map).bindPopup(label || 'Destination').openPopup();
         }
@@ -83,7 +65,6 @@ function addOrUpdateMarker(lat, lon, inputEl, label) {
     return null;
 }
 
-//de bounce functinon
 function debounce(func, delay) {
     let timeout;
     return function(...args) { 
@@ -92,7 +73,6 @@ function debounce(func, delay) {
     }
 }
 
-// create/return suggestions <ul> for an input element
 function getOrCreateSuggestionsEl(inputEl) {
     const sugId = `${inputEl.id}-suggestions`;
     let el = document.getElementById(sugId);
@@ -101,8 +81,6 @@ function getOrCreateSuggestionsEl(inputEl) {
     el = document.createElement('ul');
     el.id = sugId;
     el.className = 'suggestions-list';
-    // start hidden; visibility is controlled by the CSS .visible class
-    // track temporary suppression so clicks inside the list survive input blur
     el._suppressHide = false;
     el.addEventListener('mousedown', () => { el._suppressHide = true; });
     el.addEventListener('mouseup', () => { setTimeout(() => { el._suppressHide = false; }, 0); });
@@ -116,7 +94,6 @@ function getOrCreateSuggestionsEl(inputEl) {
     return el;
 }
 
-// close all suggestion lists
 function clearAllSuggestions() {
     inputs.forEach(i => {
         if (!i.id) return;
@@ -125,18 +102,15 @@ function clearAllSuggestions() {
     });
 }
 
-// small helper to escape displayed text
 function escapeHtml(str) {
     return String(str).replace(/[&<>\"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[s]));
 }
 
-// fetch suggestions and render into per-input suggestions UL
 async function fetchLocationSuggestions(query, inputEl) {
     const suggestionsEl = getOrCreateSuggestionsEl(inputEl);
     if (!query || !query.trim()) {
         suggestionsEl.innerHTML = '';
         suggestionsEl.classList.remove('visible');
-        // clear any stored coordinates because there's no selected suggestion
         try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
         return;
     }
@@ -154,17 +128,9 @@ async function fetchLocationSuggestions(query, inputEl) {
             return `<li class="suggestion-item" data-lat="${lat}" data-lon="${lon}" data-formatted="${escapeHtml(formatted)}">${escapeHtml(formatted)}</li>`;
         });
         suggestionsEl.innerHTML = items.join('') || '<li class="suggestion-item">No results</li>';
-        if (!items.length) {
-            // no results -> clear any stored coordinates so old coords aren't used
-            try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
-            suggestionsEl.classList.remove('visible');
-        } else {
-            // show suggestions now that we have results
-            suggestionsEl.classList.add('visible');
-        }
+        suggestionsEl.classList.toggle('visible', items.length > 0);
 
         suggestionsEl.querySelectorAll('.suggestion-item').forEach(li => {
-            // use mousedown rather than click to ensure selection before blur handlers run
             li.addEventListener('mousedown', (ev) => {
                 ev.preventDefault();
                 const formatted = li.getAttribute('data-formatted');
@@ -180,155 +146,30 @@ async function fetchLocationSuggestions(query, inputEl) {
         });
     } catch (err) {
         console.error('Suggestion fetch error:', err);
-            suggestionsEl.innerHTML = '<li class="suggestion-item">Error fetching results</li>';
-            suggestionsEl.classList.remove('visible');
-        try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
+        suggestionsEl.innerHTML = '<li class="suggestion-item">Error fetching results</li>';
     }
 }
 
-
-
-//Add event listener with debounce for location
-locationInput.addEventListener('input', debounce((e) => {
-    fetchLocationSuggestions(e.target.value, locationInput);
-}, 300));
-
-// attach listeners to all found inputs
 const debouncedFetch = debounce(fetchLocationSuggestions, 300);
 inputs.forEach(inputEl => {
     if (!inputEl.id) return;
     const suggestionsEl = getOrCreateSuggestionsEl(inputEl);
-
-    inputEl.addEventListener('input', (e) => {
-        debouncedFetch(e.target.value, inputEl);
-    });
+    inputEl.addEventListener('input', (e) => debouncedFetch(e.target.value, inputEl));
     inputEl.addEventListener('focus', (e) => {
-        // show or fetch suggestions when the input gains focus
-        if (e.target.value) debouncedFetch(e.target.value, inputEl);
-        else if (suggestionsEl && suggestionsEl.innerHTML.trim()) {
+        if (e.target.value || suggestionsEl.innerHTML.trim()) {
             suggestionsEl.classList.add('visible');
-        }}
-    )})
-
-
-//Creat a marker
-async function onButtonClick(e) {
-    // Read stored coordinates from inputs
-    const sLat = locationInput.dataset.lat;
-    const sLon = locationInput.dataset.lon;
-    const dLat = destinationInput.dataset.lat;
-    const dLon = destinationInput.dataset.lon;
-
-    if (!sLat || !sLon) {
-        console.error('Start coordinates not set. Please select a suggestion for Start Location.');
-        return;
-    }
-    if (!dLat || !dLon) {
-        console.error('Destination coordinates not set. Please select a suggestion for Destination.');
-        return;
-    }
-
-    // update markers for both inputs
-    addOrUpdateMarker(sLat, sLon, 'location', locationInput.value || 'Start');
-    addOrUpdateMarker(dLat, dLon, 'destination', destinationInput.value || 'Destination');
-
-    
-
-    // build routing request (ask Geoapify for GeoJSON)
-    const fromWaypoint = [sLat, sLon];
-    const toWaypoint = [dLat, dLon];
-    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&type=short&format=geojson&apiKey=${myAPIKey}`;
-    // const url = "https://api.geoapify.com/v1/routing?waypoints=49.41461,8.681495|49.41943,8.686507|49.420318,8.687872&mode=drive&apiKey=ad3d896b9b544b6a99f430b985dd0406&avoid=location:49.41739930948526,8.682558231927288|location:49.41842045758105,8.682297206434981"
-
-
-    fetch(url)
-        .then(res => {
-            if (!res.ok) throw new Error('Routing request failed: ' + res.status);
-            return res.json();
-        })
-        .then(async function(result) {
-            console.log('Routing result', result);
-            // remove previous route if any
-            if (routeLayer) {
-                map.removeLayer(routeLayer);
-                map.removeLayer(routeLayer);
-
-                routeLayer = null;
-            }
-
-            if (safeRouteLayer){
-                map.removeLayer(safeRouteLayer)
-                safeRouteLayer = null
-            }
-
-            if (circlesLayer) {
-                map.removeLayer(circlesLayer)
-            }
-            circlesLayer = L.layerGroup().addTo(map);
-
-            if (safeCirclesLayer) {
-                map.removeLayer(safeCirclesLayer)
-            }
-            safeCirclesLayer = L.layerGroup().addTo(map);
-
-            // Add new route layer (result should be GeoJSON FeatureCollection)
-            routeLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(128, 128, 128, 0.7)', weight: 5 })
-            }).addTo(map);
-
-             // fit map to route
-            try {
-                map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
-            } catch (err) {
-                console.warn('Could not fit bounds to route:', err);
-            }
-
-            
-            const tmp = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
-            const avgNumberofCrimes = tmp[0]
-            const crimeObjs = tmp[1]
-            console.log("length of crimeObjs = " + crimeObjs.length)
-
-            drawCrimeLocations(crimeObjs, circlesLayer)
-            updateRouteColor(avgNumberofCrimes, routeLayer);
-            
-            if (avoidCrimes == true && avgNumberofCrimes != 0){
-                avoidCrimeSection(crimeObjs)
-            } 
-
-           
-        })
-        .catch(err => {
-            console.error('Error fetching route:', err);
-        });
-//Update the route colour based on crime data
-function updateRouteColor(avgNumberofCrimes, layer) {
-    if (!layer) return; {
-
-    const colour = getRouteColor(avgNumberofCrimes);
-
-    layer.eachLayer(l => {
-        if (l.setStyle){
-            l.setStyle({ color: colour });
         }
     });
-
     inputEl.addEventListener('blur', (e) => {
-        // delay hiding to allow mousedown on suggestion to run first
         setTimeout(() => {
-            if (suggestionsEl && suggestionsEl._suppressHide) {
-                // a click inside the suggestions is happening; keep it open briefly
-                suggestionsEl._suppressHide = false;
-                return;
+            if (suggestionsEl && !suggestionsEl._suppressHide) {
+                suggestionsEl.classList.remove('visible');
             }
-            if (suggestionsEl) suggestionsEl.classList.remove('visible');
+            suggestionsEl._suppressHide = false;
         }, 150);
     });
-}
-}
-};
+});
 
-// close when clicking outside any suggestions / inputs
 document.addEventListener('click', (e) => {
     const clickedInside = inputs.some(i => {
         if (!i.id) return false;
@@ -338,152 +179,92 @@ document.addEventListener('click', (e) => {
     if (!clickedInside) clearAllSuggestions();
 });
 
-// helper to find preferred input value/dataset (prefer startPoint/destPoint over location/destination)
 function findInputPair() {
     const startEl = document.getElementById('startPoint') || document.getElementById('location');
     const destEl = document.getElementById('destPoint') || document.getElementById('destination');
     return { startEl, destEl };
 }
 
-function avoidCrimeSection(crimeObjs){
-    let coords = new Set() //lat, lng
+// --- Core Logic Functions (from Original Version) ---
 
-    for (let i = 1; i < crimeObjs.length; i++){
-        coords.add(`${crimeObjs[i].location.latitude},${crimeObjs[i].location.longitude}`)
-    }
-
-    // build routing request (ask Geoapify for GeoJSON)
-    const fromWaypoint = [sLat, sLon];
-    const toWaypoint = [dLat, dLon];
-    let url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
-    // const url = "https://api.geoapify.com/v1/routing?waypoints=49.41461,8.681495|49.41943,8.686507|49.420318,8.687872&mode=drive&apiKey=ad3d896b9b544b6a99f430b985dd0406&avoid=location:49.41739930948526,8.682558231927288|location:49.41739930948526,8.682558231927288"
-
-    if (coords.size != 0){
-        let urlappend = ""
-        for (const coord of coords){
-            urlappend += `|location:${coord}`
-        }
-        urlappend = urlappend.slice(1)
-        console.log("urlappend: ", urlappend)
-        url += "&avoid="+urlappend
-        console.log("url: "+url)
-
-    }
-
-    fetch(url)
-        .then(res => {
-            if (!res.ok) throw new Error('Routing request failed: ' + res.status);
-            return res.json();
-        })
-        .then(async function(result) {
-            console.log('Routing result', result);
-            // remove previous route if any
-            // if (routeLayer) {
-            //     map.removeLayer(routeLayer);
-            //     routeLayer = null;
-            // }
-
-            // if (circlesLayer) {
-            //     map.removeLayer(circlesLayer)
-            // }
-            // circlesLayer = L.layerGroup().addTo(map);
-
-            // Add new route layer (result should be GeoJSON FeatureCollection)
-            safeRouteLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(128, 128, 128, 0.7)', weight: 5 })
-            }).addTo(map);
-
-             // fit map to route
-            try {
-                map.fitBounds(safeRouteLayer.getBounds(), { padding: [20, 20] });
-            } catch (err) {
-                console.warn('Could not fit bounds to route:', err);
-            }
-            
-            const tmp = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
-            const avgNumberofCrimes = tmp[0]
-            const crimeObjs = tmp[1]
-           
-            console.log("length of crimeObjs = " + crimeObjs.length)
-
-            drawCrimeLocations(crimeObjs, safeCirclesLayer)
-
-            updateRouteColor(avgNumberofCrimes, safeRouteLayer);
-
-           
-        })
-        .catch(err => {
-            console.error('Error fetching route:', err);
-        });
+function getRouteColor(avgNumberofCrimes) {
+    if (avgNumberofCrimes < 1) return 'rgba(17, 255, 0, 0.7)'; // Green
+    if (avgNumberofCrimes < 2.5) return 'rgba(255, 255, 36, 0.94)'; // Yellow
+    if (avgNumberofCrimes < 5) return 'rgba(255, 172, 39, 1)'; // Orange
+    if (avgNumberofCrimes < 7) return 'rgba(222, 96, 33, 0.8)'; // Dark Orange
+    return 'rgba(255, 0, 0, 1)'; // Red
 }
-async function onButtonClick(e) {
-    if (e && e.preventDefault) e.preventDefault();
 
-function drawCrimeLocations(crimeObjs, layer){
+function updateRouteColor(avgNumberofCrimes, layer) {
+    if (!layer) return;
+    const colour = getRouteColor(avgNumberofCrimes);
+    layer.eachLayer(l => {
+        if (l.setStyle) l.setStyle({ color: colour });
+    });
+}
 
-    for (const crime of crimeObjs){
+function drawCrimeLocations(crimeObjs, layer) {
+    if (!layer) return;
+    const allCrimes = crimeObjs.flat();
+    for (const crime of allCrimes) {
         if (crime && crime.location && crime.location.latitude && crime.location.longitude) {
             L.circleMarker([crime.location.latitude, crime.location.longitude], {
-                stroke: false,      
-                fillColor: '#f03',  
-                fillOpacity: 0.2,   
+                stroke: false,
+                fillColor: '#f03',
+                fillOpacity: 0.2,
                 radius: 7
             }).addTo(layer).bindPopup(`<b>${crime.category}</b><br>${crime.month}`);
         }
     }
 }
 
+function avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon) {
+    const uniqueCoords = new Set();
+    crimeObjs.forEach(crime => {
+        if (crime && crime.location) {
+            uniqueCoords.add(`${crime.location.latitude},${crime.location.longitude}`);
+        }
+    });
+
+    const fromWaypoint = [sLat, sLon];
+    const toWaypoint = [dLat, dLon];
+    let url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+
+    if (uniqueCoords.size > 0) {
+        const avoidLocations = Array.from(uniqueCoords).map(coord => `location:${coord}`).join('|');
+        url += `&avoid=${avoidLocations}`;
+    }
+
+    fetch(url)
+        .then(res => {
+            if (!res.ok) throw new Error('Safer routing request failed: ' + res.status);
+            return res.json();
+        })
+        .then(async function(result) {
+            safeRouteLayer = L.geoJSON(result, {
+                style: () => ({ color: 'rgba(128, 128, 128, 0.7)', weight: 5 })
+            }).addTo(map);
+
+            const tmp = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
+            const avgNumberofCrimes = tmp[0];
+            const newCrimeObjs = tmp[1];
+            
+            drawCrimeLocations(newCrimeObjs, safeCirclesLayer);
+            updateRouteColor(avgNumberofCrimes, safeRouteLayer);
+        })
+        .catch(err => console.error('Error fetching safer route:', err));
+}
+
+// --- Main Button Click Handlers ---
+
+async function onButtonClick(e) {
+    if (e) e.preventDefault();
+
     const { startEl, destEl } = findInputPair();
     if (!startEl || !destEl) {
         alert('Start or destination input not found.');
         return;
     }
-
-    var legend = document.getElementById("legend");
-    if (legend) {
-        // remove the CSS class if present (keeps backward compatibility)
-        if (legend.classList && legend.classList.contains("visibility-toggle")) {
-            legend.classList.remove("visibility-toggle");
-        }
-        // remove any hidden attribute so the legend becomes visible
-        try { legend.hidden = false; } catch (e) { /* ignore if not writable */ }
-    }
-
-    // hide the input/start-destination overlay so the map and legend can take focus
-    var startEnd = document.getElementById('startEnd');
-    if (startEnd) {
-        try {
-            // add the visibility class (CSS will ensure it's hidden even with Bootstrap)
-            if (startEnd.classList && !startEnd.classList.contains('visibility-toggle')) {
-                startEnd.classList.add('visibility-toggle');
-            }
-            // also set the hidden attribute as a DOM-level guard
-            startEnd.hidden = true;
-        } catch (e) {
-            // best-effort: if setting hidden fails, leave it — nothing fatal
-            console.warn('Could not hide startEnd overlay', e);
-        }
-    }
-
-    // show the Back button (top-left) so the user can return to the input overlay
-    var backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        try { backBtn.hidden = false; } catch (e) { /* ignore */ }
-    }
-
-    // Read transport mode checkboxes. The UI uses checkboxes but only one should be selected
-    // (we enforce that via JS listeners added below). Default to driving.
-    let mode = 'drive';
-    try {
-        const driving = document.getElementById('modeDriving');
-        const walking = document.getElementById('modeWalking');
-        if (walking && walking.checked) mode = 'foot';
-        else if (driving && driving.checked) mode = 'drive';
-    } catch (err) { console.warn('Could not read mode controls', err); }
-
-    // Read 'only green' preference
-    let onlyGreen = false;
-    try { const g = document.getElementById('onlyGreen'); if (g && g.checked) onlyGreen = true; } catch (e) {}
 
     const sLat = startEl.dataset.lat;
     const sLon = startEl.dataset.lon;
@@ -493,88 +274,63 @@ function drawCrimeLocations(crimeObjs, layer){
     if (!sLat || !sLon) { alert('Please choose a start location from suggestions.'); return; }
     if (!dLat || !dLon) { alert('Please choose a destination from suggestions.'); return; }
 
+    // --- UI Toggling ---
+    document.getElementById('legend')?.removeAttribute('hidden');
+    document.getElementById('startEnd')?.setAttribute('hidden', true);
+    document.getElementById('backBtn')?.removeAttribute('hidden');
+
+    // --- Layer Cleanup ---
+    if (routeLayer) map.removeLayer(routeLayer);
+    if (safeRouteLayer) map.removeLayer(safeRouteLayer);
+    if (circlesLayer) map.removeLayer(circlesLayer);
+    if (safeCirclesLayer) map.removeLayer(safeCirclesLayer);
+
+    circlesLayer = L.layerGroup().addTo(map);
+    safeCirclesLayer = L.layerGroup().addTo(map);
+
+    // --- Main Logic ---
     addOrUpdateMarker(sLat, sLon, startEl, startEl.value || 'Start');
     addOrUpdateMarker(dLat, dLon, destEl, destEl.value || 'Destination');
 
+    const mode = document.getElementById('modeWalking')?.checked ? 'walk' : 'drive';
+    const avoidCrimes = document.getElementById('avoidCrimes')?.checked; // Assuming you have a checkbox with this ID
+
     const fromWaypoint = [sLat, sLon];
     const toWaypoint = [dLat, dLon];
-    // Use selected transport mode for routing request. If 'pt' is selected and the API
-    // doesn't support it, the request may fail — fallback behavior could be added later.
-    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=${encodeURIComponent(mode)}&format=geojson&apiKey=${myAPIKey}`;
+    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=${mode}&format=geojson&apiKey=${myAPIKey}`;
 
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('Routing request failed');
         const geojson = await res.json();
-        if (routeLayer) map.removeLayer(routeLayer);
-        // If user requested "only green" preferencing, draw route in green color.
-        // NOTE: this does not re-route around non-green segments; implementing
-        // route-avoidance requires analyzing segment crime scores and requesting
-        // alternate routes from the routing provider.
-        const routeColor = onlyGreen ? getRouteColor(0) : '#3388ff';
+
         routeLayer = L.geoJSON(geojson, {
-            style: { color: routeColor, weight: 6, opacity: 0.8 }
+            style: { color: 'rgba(128, 128, 128, 0.7)', weight: 5 }
         }).addTo(map);
-        map.fitBounds(routeLayer.getBounds(), { padding: [50,50] });
+        map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+
+        const tmp = await getAvgNumberOfCrimesForCoords(geojson.features[0].geometry.coordinates[0]);
+        const avgNumberofCrimes = tmp[0];
+        const crimeObjs = tmp[1];
+
+        drawCrimeLocations(crimeObjs, circlesLayer);
+        updateRouteColor(avgNumberofCrimes, routeLayer);
+
+        if (avoidCrimes && avgNumberofCrimes > 0) {
+            console.log("avoid crimes activated")
+            avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon);
+        }
     } catch (err) {
         console.error('Routing error:', err);
         alert('Error fetching route.');
     }
 }
-
-// expose onButtonClick globally if index.html expects that name
 window.onButtonClick = onButtonClick;
 
-// called when the user clicks the Back button in the top-left
 function onBackClick(e) {
     if (e && e.preventDefault) e.preventDefault();
-
-    var legend = document.getElementById('legend');
-    if (legend) {
-        // hide legend again
-        try {
-            if (legend.classList && !legend.classList.contains('visibility-toggle')) {
-                legend.classList.add('visibility-toggle');
-            }
-            legend.hidden = true;
-        } catch (err) { /* ignore */ }
-    }
-
-    var startEnd = document.getElementById('startEnd');
-    if (startEnd) {
-        try {
-            // show the overlay
-            if (startEnd.classList && startEnd.classList.contains('visibility-toggle')) {
-                startEnd.classList.remove('visibility-toggle');
-            }
-            startEnd.hidden = false;
-        } catch (err) { /* ignore */ }
-    }
-
-    var backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        try { backBtn.hidden = true; } catch (e) { /* ignore */ }
-    }
+    document.getElementById('legend')?.setAttribute('hidden', true);
+    document.getElementById('startEnd')?.removeAttribute('hidden');
+    document.getElementById('backBtn')?.setAttribute('hidden', true);
 }
-
 window.onBackClick = onBackClick;
-
-// helper: get color based on avg crime (kept from previous file if used elsewhere)
-function getRouteColor(avgNumberofCrimes) {
-    if (avgNumberofCrimes < 2) {
-        return 'rgba(17, 255, 0, 0.7)'; // Green
-    } else if (avgNumberofCrimes < 3) {
-        return 'rgba(255, 255, 36, 0.94)'; // Yellow
-    } else if (avgNumberofCrimes < 5) {
-        return 'rgba(255, 172, 39, 1)'; // Orange
-    } else if (avgNumberofCrimes < 7) {
-        return 'rgba(222, 96, 33, 0.8)'; // Dark Orange
-    } else {
-        return 'rgba(255, 0, 0, 1)'; // Red
-    }
-}
-
-
-
-
-
