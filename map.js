@@ -195,6 +195,8 @@ function getRouteColor(avgNumberofCrimes) {
     return 'rgba(255, 0, 0, 1)'; // Red
 }
 
+
+
 function updateRouteColor(avgNumberofCrimes, layer) {
     if (!layer) return;
     const colour = getRouteColor(avgNumberofCrimes);
