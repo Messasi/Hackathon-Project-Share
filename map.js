@@ -209,6 +209,8 @@ async function fetchAndDisplayBothRoutes(fromWaypoint, toWaypoint) {
         walkRouteLayer = L.geoJSON(walkResult, {
             style: () => ({ color: 'gray', weight: 7 })
         }).addTo(map);
+
+
         if (carRouteLayer) carRouteLayer.bindPopup('Car Route').openPopup();
         if (walkRouteLayer) walkRouteLayer.bindPopup('Walking Route').openPopup();
         const group = new L.FeatureGroup([carRouteLayer, walkRouteLayer]);
@@ -247,7 +249,7 @@ function drawCrimeLocations(crimeObjs, layer) {
     }
 }
 
-function avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon) {
+function avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon, mode = "drive") {
     const uniqueCoords = new Set();
     crimeObjs.forEach(crime => {
         if (crime && crime.location) {
@@ -257,7 +259,7 @@ function avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon) {
 
     const fromWaypoint = [sLat, sLon];
     const toWaypoint = [dLat, dLon];
-    let url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+    let url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=${mode}&format=geojson&apiKey=${myAPIKey}`;
 
     if (uniqueCoords.size > 0) {
         const avoidLocations = Array.from(uniqueCoords).map(coord => `location:${coord}`).join('|');
@@ -270,19 +272,18 @@ function avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon) {
             return res.json();
         })
         .then(async function(result) {
-            safeRouteLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(128, 128, 128, 0.7)', weight: 5 })
-            }).addTo(map);
-
             const tmp = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
             const avgNumberofCrimes = tmp[0];
             const newCrimeObjs = tmp[1];
-            
+            safeRouteLayer = L.geoJSON(result, {
+                style: () => ({ color: getRouteColor(avgNumberofCrimes), weight: 5 })
+            }).addTo(map);
             drawCrimeLocations(newCrimeObjs, safeCirclesLayer);
             updateRouteColor(avgNumberofCrimes, safeRouteLayer);
         })
         .catch(err => console.error('Error fetching safer route:', err));
 }
+
 
 // --- Main Button Click Handlers ---
 
@@ -303,6 +304,8 @@ async function onButtonClick(e) {
     // Get the selected mode from radio buttons
     const isDriving = document.getElementById('modeDriving').checked;
     const isWalking = document.getElementById('modeWalking').checked;
+    const avoidCrimeCheckbox = document.getElementById('avoidCrimes');
+    const avoidCrimes = avoidCrimeCheckbox && avoidCrimeCheckbox.checked;
 
     if (!sLat || !sLon) { alert('Please choose a start location from suggestions.'); return; }
     if (!dLat || !dLon) { alert('Please choose a destination from suggestions.'); return; }
@@ -329,39 +332,55 @@ async function onButtonClick(e) {
     const toWaypoint = [dLat, dLon];
 
     try {
-        // Fetch and display car route if driving is selected
-        if (isDriving) {
-            const carUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
-            const carResponse = await fetch(carUrl);
-            if (!carResponse.ok) throw new Error('Car routing request failed');
-            const carResult = await carResponse.json();
-            carRouteLayer = L.geoJSON(carResult, {
-                style: { color: 'rgba(128, 128, 128, 0.7)', weight: 5 }
-            }).addTo(map);
-            const carCrimes = await getAvgNumberOfCrimesForCoords(carResult.features[0].geometry.coordinates[0]);
-            updateRouteColor(carRouteLayer, carCrimes[0]);
-            carRouteLayer.bindPopup('Car Route').openPopup();
-        }
-        // Fetch and display walking route if walking is selected
-        if (isWalking) {
-            const walkUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=walk&format=geojson&apiKey=${myAPIKey}`;
-            const walkResponse = await fetch(walkUrl);
-            if (!walkResponse.ok) throw new Error('Walking routing request failed');
-            const walkResult = await walkResponse.json();
-            walkRouteLayer = L.geoJSON(walkResult, {
-                style: { color: 'rgba(128, 128, 128, 0.7)', weight: 5 }
-            }).addTo(map);
-            const walkCrimes = await getAvgNumberOfCrimesForCoords(walkResult.features[0].geometry.coordinates[0]);
-            updateRouteColor(walkRouteLayer, walkCrimes[0]);
-            walkRouteLayer.bindPopup('Walking Route').openPopup();
-        }
-        // Fit map to show all visible routes
-        const visibleLayers = [];
-        if (carRouteLayer && isDriving) visibleLayers.push(carRouteLayer);
-        if (walkRouteLayer && isWalking) visibleLayers.push(walkRouteLayer);
-        if (visibleLayers.length > 0) {
-            const group = new L.FeatureGroup(visibleLayers);
-            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+        if (avoidCrimes) {
+            // Determine mode
+            let mode = isDriving ? "drive" : (isWalking ? "walk" : "drive");
+            // Fetch the normal route first to get crime data
+            let routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=${mode}&format=geojson&apiKey=${myAPIKey}`;
+            const routeResponse = await fetch(routeUrl);
+            if (!routeResponse.ok) throw new Error('Routing request failed');
+            const routeResult = await routeResponse.json();
+            // Get crime data for the normal route
+            const crimeData = await getAvgNumberOfCrimesForCoords(routeResult.features[0].geometry.coordinates[0]);
+            // Show the safe route avoiding crime spots
+            avoidCrimeSection(crimeData[1], sLat, sLon, dLat, dLon, mode);
+        } else {
+            // Fetch and display car route if driving is selected
+            if (isDriving) {
+                const carUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+                const carResponse = await fetch(carUrl);
+                if (!carResponse.ok) throw new Error('Car routing request failed');
+                const carResult = await carResponse.json();
+                carRouteLayer = L.geoJSON(carResult, {
+                    style: { color: 'rgba(128, 128, 128, 0.7)', weight: 5 }
+                }).addTo(map);
+                const carCrimes = await getAvgNumberOfCrimesForCoords(carResult.features[0].geometry.coordinates[0]);
+                updateRouteColor(carRouteLayer, carCrimes[0]);
+                carRouteLayer.bindPopup('Car Route').openPopup();
+                drawCrimeLocations(carCrimes[1], circlesLayer);
+            }
+            // Fetch and display walking route if walking is selected
+            if (isWalking) {
+                const walkUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=walk&format=geojson&apiKey=${myAPIKey}`;
+                const walkResponse = await fetch(walkUrl);
+                if (!walkResponse.ok) throw new Error('Walking routing request failed');
+                const walkResult = await walkResponse.json();
+                walkRouteLayer = L.geoJSON(walkResult, {
+                    style: { color: 'rgba(128, 128, 128, 0.7)', weight: 5 }
+                }).addTo(map);
+                const walkCrimes = await getAvgNumberOfCrimesForCoords(walkResult.features[0].geometry.coordinates[0]);
+                updateRouteColor(walkRouteLayer, walkCrimes[0]);
+                walkRouteLayer.bindPopup('Walking Route').openPopup();
+                drawCrimeLocations(walkCrimes[1], circlesLayer);
+            }
+            // Fit map to show all visible routes
+            const visibleLayers = [];
+            if (carRouteLayer && isDriving) visibleLayers.push(carRouteLayer);
+            if (walkRouteLayer && isWalking) visibleLayers.push(walkRouteLayer);
+            if (visibleLayers.length > 0) {
+                const group = new L.FeatureGroup(visibleLayers);
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
         }
     } catch (err) {
         console.error('Routing error:', err);
@@ -382,6 +401,14 @@ window.onBackClick = onBackClick;
 document.addEventListener('DOMContentLoaded', () => {
     const modeDriving = document.getElementById('modeDriving');
     const modeWalking = document.getElementById('modeWalking');
+
+    // Add event listener for avoidCrimes checkbox
+    const avoidCrimeCheckbox = document.getElementById('avoidCrimes');
+    if (avoidCrimeCheckbox) {
+        avoidCrimeCheckbox.addEventListener('change', () => {
+            window.onButtonClick();
+        });
+    }
 
     if (modeDriving && modeWalking) {
         modeDriving.addEventListener('change', () => {
