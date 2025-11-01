@@ -1,16 +1,24 @@
 // Initialize the map
+//Initialize the map
 const mapDiv = document.getElementById('map');
 if (!mapDiv) {
     throw new Error("Map container with id 'map' not found. Please add <div id='map'></div> to your HTML.");
 }
+
 const map = L.map('map').setView([51.505, -0.09], 17);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 25,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+
+// Use Geoapify 3D Maptiler tiles
+const myAPIKey = "ad3d896b9b544b6a99f430b985dd0406";
+
+L.tileLayer('https://maps.geoapify.com/v1/tile/maptiler-3d/{z}/{x}/{y}.png?apiKey=' + myAPIKey, {
+    attribution: 'Powered by <a href="https://www.geoapify.com/" target="_blank">Geoapify</a> | <a href="https://openmaptiles.org/" target="_blank">© OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">© OpenStreetMap</a> contributors',
+    maxZoom: 20,
+    id: 'maptiler-3d'
 }).addTo(map);
 
+
 // API key and DOM elements
-const myAPIKey = "ad3d896b9b544b6a99f430b985dd0406";
+
 const inputSelectors = ['#startPoint', '#destPoint', '#location', '#destination'];
 const inputs = Array.from(document.querySelectorAll(inputSelectors.join(',')));
 
@@ -21,6 +29,7 @@ let carRouteLayer = null;
 let walkRouteLayer = null;
 let circlesLayer = null;
 let safeCirclesLayer = null;
+let safeRouteLayer = null;
 
 // --- UI and Autocomplete Functions (from Merged Version) ---
 
@@ -274,7 +283,7 @@ function drawCrimeLocations(crimeObjs, layer) {
     }
 }
 
-function avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon, mode = "drive") {
+async function avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon, mode = "drive") {
     const uniqueCoords = new Set();
     crimeObjs.forEach(crime => {
         if (crime && crime.location) {
@@ -304,9 +313,12 @@ function avoidCrimeSection(crimeObjs, sLat, sLon, dLat, dLon, mode = "drive") {
                 style: () => ({ color: getRouteColor(avgNumberofCrimes), weight: 5 })
             }).addTo(map);
             drawCrimeLocations(newCrimeObjs, safeCirclesLayer);
-            updateRouteColor(avgNumberofCrimes, safeRouteLayer);
+            updateRouteColor(safeRouteLayer, avgNumberofCrimes);
         })
-        .catch(err => console.error('Error fetching safer route:', err));
+        .catch(err => {console.error('Error fetching safer route:', err);  
+        hideLoading();  
+       
+});
 }
 
 
@@ -350,6 +362,7 @@ async function onButtonClick(e) {
     if (walkRouteLayer) map.removeLayer(walkRouteLayer);
     if (circlesLayer) map.removeLayer(circlesLayer);
     if (safeCirclesLayer) map.removeLayer(safeCirclesLayer);
+    if (safeRouteLayer) map.removeLayer(safeRouteLayer);
 
     circlesLayer = L.layerGroup().addTo(map);
     safeCirclesLayer = L.layerGroup().addTo(map);
@@ -379,7 +392,8 @@ async function onButtonClick(e) {
             // Show the safe route avoiding crime spots
 
              updateLoadingStatus('Calculating safer alternative...');
-            avoidCrimeSection(crimeData[1], sLat, sLon, dLat, dLon, mode);
+           await avoidCrimeSection(crimeData[1], sLat, sLon, dLat, dLon, mode);
+           hideLoading();
         } else {
             // Fetch and display car route if driving is selected
             if (isDriving) {
@@ -398,6 +412,8 @@ async function onButtonClick(e) {
                 updateRouteColor(carRouteLayer, carCrimes[0]);
                 carRouteLayer.bindPopup('Car Route').openPopup();
                 drawCrimeLocations(carCrimes[1], circlesLayer);
+                hideLoading();
+
             }
             // Fetch and display walking route if walking is selected
             if (isWalking) {
@@ -429,42 +445,38 @@ async function onButtonClick(e) {
         }
     } catch (err) {
         console.error('Routing error:', err);
+        hideLoading();
         alert('Error fetching route(s).');
     }
 }
 window.onButtonClick = onButtonClick;
 
-function onBackClick(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    const startEnd = document.getElementById('startEnd');
-    const backBtn = document.getElementById('backBtn');
-    if (startEnd) startEnd.hidden = false;
-    if (backBtn) backBtn.hidden = true;
-}
-window.onBackClick = onBackClick;
+
 
 // Add event listeners for the radio buttons
 document.addEventListener('DOMContentLoaded', () => {
     const modeDriving = document.getElementById('modeDriving');
     const modeWalking = document.getElementById('modeWalking');
+    const avoidCrimeCheckbox = document.getElementById('avoidCrimes');
 
     // Add event listener for avoidCrimes checkbox
-    const avoidCrimeCheckbox = document.getElementById('avoidCrimes');
-    if (avoidCrimeCheckbox) {
-        avoidCrimeCheckbox.addEventListener('change', () => {
+    const handleModeChange = () => {
+        if(startEl&& startEl.dataset.lat&& destEl&&destEl.dataset.lan){
             window.onButtonClick();
-        });
+    }
+}
+
+
+    if(avoidCrimeCheckbox){
+        avoidCrimeCheckbox.addEventListener('change', handleModeChange);
     }
 
-    if (modeDriving && modeWalking) {
-        modeDriving.addEventListener('change', () => {
-            if (carRouteLayer) map.addLayer(carRouteLayer);
-            if (walkRouteLayer) map.removeLayer(walkRouteLayer);
-        });
-
-        modeWalking.addEventListener('change', () => {
-            if (walkRouteLayer) map.addLayer(walkRouteLayer);
-            if (carRouteLayer) map.removeLayer(carRouteLayer);
-        });
+    if (modeDriving) {
+        modeDriving.addEventListener('change', handleModeChange);
     }
+
+    if (modeWalking) {
+        modeWalking.addEventListener('change', handleModeChange);
+    }
+    
 });
