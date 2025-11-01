@@ -32,6 +32,31 @@ function roleFromId(id) {
     return null;
 }
 
+function showLoading(message = 'Loading...') {
+    const overlay = document.getElementById('loadingOverlay');
+    const status = document.getElementById('loadingStatus');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        if (status && message) {
+            status.textContent = message;
+        }
+    }
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+}
+
+function updateLoadingStatus(message) {
+    const status = document.getElementById('loadingStatus');
+    if (status) {
+        status.textContent = message;
+    }
+}
+
 function addOrUpdateMarker(lat, lon, inputEl, label) {
     if (!lat || !lon) return null;
     const latNum = parseFloat(lat);
@@ -310,12 +335,17 @@ async function onButtonClick(e) {
     if (!sLat || !sLon) { alert('Please choose a start location from suggestions.'); return; }
     if (!dLat || !dLon) { alert('Please choose a destination from suggestions.'); return; }
 
-    // --- UI Toggling ---
-    document.getElementById('legend')?.removeAttribute('hidden');
-    document.getElementById('startEnd')?.setAttribute('hidden', true);
-    document.getElementById('backBtn')?.removeAttribute('hidden');
+    //showign loading screen
+    showLoading('Fetching route data...');
 
-    // --- Layer Cleanup ---
+
+    //  UI Toggling
+    const startEnd = document.getElementById('startEnd');
+    const backBtn = document.getElementById('backBtn');
+    if (startEnd) startEnd.hidden = true;
+    if (backBtn) backBtn.hidden = false;
+
+    // Layer Cleanup 
     if (carRouteLayer) map.removeLayer(carRouteLayer);
     if (walkRouteLayer) map.removeLayer(walkRouteLayer);
     if (circlesLayer) map.removeLayer(circlesLayer);
@@ -324,7 +354,7 @@ async function onButtonClick(e) {
     circlesLayer = L.layerGroup().addTo(map);
     safeCirclesLayer = L.layerGroup().addTo(map);
 
-    // --- Main Logic ---
+    // 
     addOrUpdateMarker(sLat, sLon, startEl, startEl.value || 'Start');
     addOrUpdateMarker(dLat, dLon, destEl, destEl.value || 'Destination');
 
@@ -333,27 +363,37 @@ async function onButtonClick(e) {
 
     try {
         if (avoidCrimes) {
+             updateLoadingStatus('Finding safest route...');
             // Determine mode
             let mode = isDriving ? "drive" : (isWalking ? "walk" : "drive");
             // Fetch the normal route first to get crime data
             let routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=${mode}&format=geojson&apiKey=${myAPIKey}`;
             const routeResponse = await fetch(routeUrl);
             if (!routeResponse.ok) throw new Error('Routing request failed');
+
+            updateLoadingStatus('Analyzing crime data...');
+
             const routeResult = await routeResponse.json();
             // Get crime data for the normal route
             const crimeData = await getAvgNumberOfCrimesForCoords(routeResult.features[0].geometry.coordinates[0]);
             // Show the safe route avoiding crime spots
+
+             updateLoadingStatus('Calculating safer alternative...');
             avoidCrimeSection(crimeData[1], sLat, sLon, dLat, dLon, mode);
         } else {
             // Fetch and display car route if driving is selected
             if (isDriving) {
+                updateLoadingStatus('Fetching driving route...');
                 const carUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
                 const carResponse = await fetch(carUrl);
                 if (!carResponse.ok) throw new Error('Car routing request failed');
                 const carResult = await carResponse.json();
+
                 carRouteLayer = L.geoJSON(carResult, {
                     style: { color: 'rgba(128, 128, 128, 0.7)', weight: 5 }
                 }).addTo(map);
+
+                updateLoadingStatus('Analyzing crime data...');
                 const carCrimes = await getAvgNumberOfCrimesForCoords(carResult.features[0].geometry.coordinates[0]);
                 updateRouteColor(carRouteLayer, carCrimes[0]);
                 carRouteLayer.bindPopup('Car Route').openPopup();
@@ -361,6 +401,7 @@ async function onButtonClick(e) {
             }
             // Fetch and display walking route if walking is selected
             if (isWalking) {
+                updateLoadingStatus('Fetching walking route...')
                 const walkUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=walk&format=geojson&apiKey=${myAPIKey}`;
                 const walkResponse = await fetch(walkUrl);
                 if (!walkResponse.ok) throw new Error('Walking routing request failed');
@@ -368,6 +409,9 @@ async function onButtonClick(e) {
                 walkRouteLayer = L.geoJSON(walkResult, {
                     style: { color: 'rgba(128, 128, 128, 0.7)', weight: 5 }
                 }).addTo(map);
+
+                 
+                updateLoadingStatus('Analyzing crime data...');
                 const walkCrimes = await getAvgNumberOfCrimesForCoords(walkResult.features[0].geometry.coordinates[0]);
                 updateRouteColor(walkRouteLayer, walkCrimes[0]);
                 walkRouteLayer.bindPopup('Walking Route').openPopup();
@@ -381,6 +425,7 @@ async function onButtonClick(e) {
                 const group = new L.FeatureGroup(visibleLayers);
                 map.fitBounds(group.getBounds(), { padding: [50, 50] });
             }
+                hideLoading();
         }
     } catch (err) {
         console.error('Routing error:', err);
@@ -391,9 +436,10 @@ window.onButtonClick = onButtonClick;
 
 function onBackClick(e) {
     if (e && e.preventDefault) e.preventDefault();
-    document.getElementById('legend')?.setAttribute('hidden', true);
-    document.getElementById('startEnd')?.removeAttribute('hidden');
-    document.getElementById('backBtn')?.setAttribute('hidden', true);
+    const startEnd = document.getElementById('startEnd');
+    const backBtn = document.getElementById('backBtn');
+    if (startEnd) startEnd.hidden = false;
+    if (backBtn) backBtn.hidden = true;
 }
 window.onBackClick = onBackClick;
 

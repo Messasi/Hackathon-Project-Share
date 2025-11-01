@@ -56,35 +56,41 @@
         </div>
     </div>
 
-<div class="d-flex justify-content-end align-items-end mt-5">
-    <div id="legend" class="d-flex flex-column visibility-toggle" hidden style="position:fixed; z-index: 998;">
-        <div class="shadow-lg p-2 mb-3 bg-body rounded">  
-        <table class="table">
-        <thead>
-            <tr>
-                <th scope="col">Legend</th>
-                <th scope="col"></th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td class="border-end bg-danger">Red</td>
-                <td>Severe danger</td>
-            </tr>
-            <tr>
-                <td class="border-end bg-warning">Amber</td>
-                <td>Moderate danger</td>
-            </tr>
-            <tr>
-                <td class="border-end bg-success">Green</td>
-                <td>Safe to travel</td>
-            </tr>
-        </tbody>
-        </table>
+<div id="legend">
+    <div class="legend-container">
+        <h4 class="legend-title">Safety Level</h4>
+        <div class="legend-items">
+            <div class="legend-item">
+                <span class="color-box" style="background: rgba(17, 255, 0, 0.9);"></span>
+                <span class="legend-text">Very Safe</span>
+            </div>
+            <div class="legend-item">
+                <span class="color-box" style="background: rgba(255, 255, 36, 0.94);"></span>
+                <span class="legend-text">Safe</span>
+            </div>
+            <div class="legend-item">
+                <span class="color-box" style="background: rgba(255, 172, 39, 1);"></span>
+                <span class="legend-text">Moderate</span>
+            </div>
+            <div class="legend-item">
+                <span class="color-box" style="background: rgba(222, 96, 33, 0.9);"></span>
+                <span class="legend-text">High Risk</span>
+            </div>
+            <div class="legend-item">
+                <span class="color-box" style="background: rgba(255, 0, 0, 1);"></span>
+                <span class="legend-text">Danger</span>
+            </div>
         </div>
     </div>
 </div>
 
+<div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <h3 class="loading-text">Analyzing Route Safety...</h3>
+        <p class="loading-subtext" id="loadingStatus">Fetching route data</p>
+    </div>
+</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
