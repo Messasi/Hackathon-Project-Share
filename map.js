@@ -21,6 +21,8 @@ let activeInput = null;
 let startMarker = null;
 let destMarker = null;
 let routeLayer = null;
+let carRouteLayer = null;
+let walkRouteLayer = null;
 
 // helper to add or update a marker for start/destination inputs
 function addOrUpdateMarker(lat, lon, inputId, label) {
@@ -108,7 +110,7 @@ destinationInput.addEventListener('input', debounce((e) => {
 
 //Creat a marker
 async function onButtonClick(e) {
-    // Read stored coordinates from inputs
+
     const sLat = locationInput.dataset.lat;
     const sLon = locationInput.dataset.lon;
     const dLat = destinationInput.dataset.lat;
@@ -123,65 +125,79 @@ async function onButtonClick(e) {
         return;
     }
 
-    // update markers for both inputs
+    // Update markers for both inputs
     addOrUpdateMarker(sLat, sLon, 'location', locationInput.value || 'Start');
     addOrUpdateMarker(dLat, dLon, 'destination', destinationInput.value || 'Destination');
 
-    // build routing request (ask Geoapify for GeoJSON)
+    // Build routing requests
     const fromWaypoint = [sLat, sLon];
     const toWaypoint = [dLat, dLon];
-    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
-    let avgNumberofCrimes = null;
+    const carUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+    const walkUrl = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=walk&format=geojson&apiKey=${myAPIKey}`;
 
-    fetch(url)
-        .then(res => {
-            if (!res.ok) throw new Error('Routing request failed: ' + res.status);
-            return res.json();
-        })
-        .then(async function(result) {
-            console.log('Routing result', result);
-            // remove previous route if any
-            if (routeLayer) {
-                map.removeLayer(routeLayer);
-                routeLayer = null;
-            }
+    try {
+        const [carResponse, walkResponse] = await Promise.all([fetch(carUrl), fetch(walkUrl)]);
 
-            // Add new route layer (result should be GeoJSON FeatureCollection)
-            routeLayer = L.geoJSON(result, {
-                style: () => ({ color: 'rgba(128, 128, 128, 0.7)', weight: 5 })
-            }).addTo(map);
+        if (!carResponse.ok || !walkResponse.ok) {
+            throw new Error('Routing request failed');
+        }
 
-             // fit map to route
-            try {
-                map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
-            } catch (err) {
-                console.warn('Could not fit bounds to route:', err);
-            }
-            
-           const avgNumberofCrimes = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
-        
+        const carResult = await carResponse.json();
+        const walkResult = await walkResponse.json();
 
-            updateRouteColor(avgNumberofCrimes);
+        // Remove previous route layers if they exist
+        if (carRouteLayer) {
+            map.removeLayer(carRouteLayer);
+        }
+        if (walkRouteLayer) {
+            map.removeLayer(walkRouteLayer);
+        }
 
-           
-        })
-        .catch(err => {
-            console.error('Error fetching route:', err);
-        });
-//Update the route colour based on crime data
-function updateRouteColor(avgNumberofCrimes) {
-    if (!routeLayer) return; {
+        // Add car route to the map
+        carRouteLayer = L.geoJSON(carResult, {
+            style: () => ({ color: 'gray', weight: 5 })
+        }).addTo(map);
+
+        // Add walking route to the map
+        walkRouteLayer = L.geoJSON(walkResult, {
+            style: () => ({ color: 'gray', weight: 5 })
+        }).addTo(map);
+
+        // Add popups to indicate which route is which
+        if (carRouteLayer) {
+            carRouteLayer.bindPopup('Car Route').openPopup();
+        }
+        if (walkRouteLayer) {
+            walkRouteLayer.bindPopup('Walking Route').openPopup();
+        }
+
+        // Fit map to show both routes
+        const group = new L.FeatureGroup([carRouteLayer, walkRouteLayer]);
+        map.fitBounds(group.getBounds(), { padding: [20, 20] });
+
+        // Calculate and update route colors based on crime data
+        const carCrimes = await getAvgNumberOfCrimesForCoords(carResult.features[0].geometry.coordinates[0]);
+        const walkCrimes = await getAvgNumberOfCrimesForCoords(walkResult.features[0].geometry.coordinates[0]);
+
+        updateRouteColor(carRouteLayer, carCrimes);
+        updateRouteColor(walkRouteLayer, walkCrimes);
+
+    } catch (err) {
+        console.error('Error fetching routes:', err);
+    }
+}
+
+// Update route color for a specific route layer
+function updateRouteColor(routeLayer, avgNumberofCrimes) {
+    if (!routeLayer) return;
 
     const colour = getRouteColor(avgNumberofCrimes);
-
     routeLayer.eachLayer(layer => {
-        if (layer.setStyle){
+        if (layer.setStyle) {
             layer.setStyle({ color: colour });
         }
     });
 }
-}
-
 
 //Funciton to change the colour of the route based on crime data
 
@@ -199,6 +215,8 @@ function getRouteColor(avgNumberofCrimes) {
     }
 }
     
+//Function to change the route based on checkbox clicked 
+function changeRouteMode(mode) {
 
 }
 
