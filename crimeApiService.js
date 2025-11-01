@@ -4,7 +4,7 @@ async function _fetchCrimesAtLocation(lat, lng, date){
     return data
 }
 
-async function getCrimesAtLocation(lat, lng, crimeTimeframeMonths = 3){
+async function getCrimesAtLocation(lat, lng, crimeTimeframeMonths = 2){
 // assert: crimeTimeframe >= 1
     
     const promises = [];
@@ -16,7 +16,7 @@ async function getCrimesAtLocation(lat, lng, crimeTimeframeMonths = 3){
         console.log(`i = ${i}`)
 
         const targetDate = new Date(today);
-        targetDate.setMonth(today.getMonth() - i);
+        targetDate.setMonth(today.getMonth() - i-1);
 
         const year = targetDate.getFullYear();
         const month = String(targetDate.getMonth() + 1).padStart(2, '0');

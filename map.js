@@ -12,15 +12,21 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 
 //Autofill location 
-const myAPIKey = "a941066835354227943419eb425fff6a";
+// const myAPIKey = "a941066835354227943419eb425fff6a";
+const myAPIKey = "ad3d896b9b544b6a99f430b985dd0406"
 const locationInput = document.getElementById("location");
 const destinationInput = document.getElementById("destination");
 const suggestions = document.getElementById("suggestions");
+
+const avoidCrimes = false;
 
 let activeInput = null;
 let startMarker = null;
 let destMarker = null;
 let routeLayer = null;
+let safeRouteLayer = null;
+let circlesLayer = L.layerGroup().addTo(map);
+let safeCirclesLayer = L.layerGroup().addTo(map);
 
 // helper to add or update a marker for start/destination inputs
 function addOrUpdateMarker(lat, lon, inputId, label) {
@@ -95,6 +101,8 @@ async function fetchLocationSuggestions(query, inputElement) {
     }
 }
 
+
+
 //Add event listener with debounce for location
 locationInput.addEventListener('input', debounce((e) => {
     fetchLocationSuggestions(e.target.value, locationInput);
@@ -127,11 +135,14 @@ async function onButtonClick(e) {
     addOrUpdateMarker(sLat, sLon, 'location', locationInput.value || 'Start');
     addOrUpdateMarker(dLat, dLon, 'destination', destinationInput.value || 'Destination');
 
+    
+
     // build routing request (ask Geoapify for GeoJSON)
     const fromWaypoint = [sLat, sLon];
     const toWaypoint = [dLat, dLon];
-    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
-    let avgNumberofCrimes = null;
+    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&type=short&format=geojson&apiKey=${myAPIKey}`;
+    // const url = "https://api.geoapify.com/v1/routing?waypoints=49.41461,8.681495|49.41943,8.686507|49.420318,8.687872&mode=drive&apiKey=ad3d896b9b544b6a99f430b985dd0406&avoid=location:49.41739930948526,8.682558231927288|location:49.41842045758105,8.682297206434981"
+
 
     fetch(url)
         .then(res => {
@@ -143,10 +154,25 @@ async function onButtonClick(e) {
             // remove previous route if any
             if (routeLayer) {
                 map.removeLayer(routeLayer);
+                map.removeLayer(routeLayer);
+
                 routeLayer = null;
             }
 
-            getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0])
+            if (safeRouteLayer){
+                map.removeLayer(safeRouteLayer)
+                safeRouteLayer = null
+            }
+
+            if (circlesLayer) {
+                map.removeLayer(circlesLayer)
+            }
+            circlesLayer = L.layerGroup().addTo(map);
+
+            if (safeCirclesLayer) {
+                map.removeLayer(safeCirclesLayer)
+            }
+            safeCirclesLayer = L.layerGroup().addTo(map);
 
             // Add new route layer (result should be GeoJSON FeatureCollection)
             routeLayer = L.geoJSON(result, {
@@ -159,11 +185,19 @@ async function onButtonClick(e) {
             } catch (err) {
                 console.warn('Could not fit bounds to route:', err);
             }
-            
-           const avgNumberofCrimes = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
-        
 
-            updateRouteColor(avgNumberofCrimes);
+            
+            const tmp = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
+            const avgNumberofCrimes = tmp[0]
+            const crimeObjs = tmp[1]
+            console.log("length of crimeObjs = " + crimeObjs.length)
+
+            drawCrimeLocations(crimeObjs, circlesLayer)
+            updateRouteColor(avgNumberofCrimes, routeLayer);
+            
+            if (avoidCrimes == true && avgNumberofCrimes != 0){
+                avoidCrimeSection(crimeObjs)
+            } 
 
            
         })
@@ -171,19 +205,104 @@ async function onButtonClick(e) {
             console.error('Error fetching route:', err);
         });
 //Update the route colour based on crime data
-function updateRouteColor(avgNumberofCrimes) {
-    if (!routeLayer) return; {
+function updateRouteColor(avgNumberofCrimes, layer) {
+    if (!layer) return; {
 
     const colour = getRouteColor(avgNumberofCrimes);
 
-    routeLayer.eachLayer(layer => {
-        if (layer.setStyle){
-            layer.setStyle({ color: colour });
+    layer.eachLayer(l => {
+        if (l.setStyle){
+            l.setStyle({ color: colour });
         }
     });
 }
 }
 
+function avoidCrimeSection(crimeObjs){
+    let coords = new Set() //lat, lng
+
+    for (let i = 1; i < crimeObjs.length; i++){
+        coords.add(`${crimeObjs[i].location.latitude},${crimeObjs[i].location.longitude}`)
+    }
+
+    // build routing request (ask Geoapify for GeoJSON)
+    const fromWaypoint = [sLat, sLon];
+    const toWaypoint = [dLat, dLon];
+    let url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=drive&format=geojson&apiKey=${myAPIKey}`;
+    // const url = "https://api.geoapify.com/v1/routing?waypoints=49.41461,8.681495|49.41943,8.686507|49.420318,8.687872&mode=drive&apiKey=ad3d896b9b544b6a99f430b985dd0406&avoid=location:49.41739930948526,8.682558231927288|location:49.41739930948526,8.682558231927288"
+
+    if (coords.size != 0){
+        let urlappend = ""
+        for (const coord of coords){
+            urlappend += `|location:${coord}`
+        }
+        urlappend = urlappend.slice(1)
+        console.log("urlappend: ", urlappend)
+        url += "&avoid="+urlappend
+        console.log("url: "+url)
+
+    }
+
+    fetch(url)
+        .then(res => {
+            if (!res.ok) throw new Error('Routing request failed: ' + res.status);
+            return res.json();
+        })
+        .then(async function(result) {
+            console.log('Routing result', result);
+            // remove previous route if any
+            // if (routeLayer) {
+            //     map.removeLayer(routeLayer);
+            //     routeLayer = null;
+            // }
+
+            // if (circlesLayer) {
+            //     map.removeLayer(circlesLayer)
+            // }
+            // circlesLayer = L.layerGroup().addTo(map);
+
+            // Add new route layer (result should be GeoJSON FeatureCollection)
+            safeRouteLayer = L.geoJSON(result, {
+                style: () => ({ color: 'rgba(128, 128, 128, 0.7)', weight: 5 })
+            }).addTo(map);
+
+             // fit map to route
+            try {
+                map.fitBounds(safeRouteLayer.getBounds(), { padding: [20, 20] });
+            } catch (err) {
+                console.warn('Could not fit bounds to route:', err);
+            }
+            
+            const tmp = await getAvgNumberOfCrimesForCoords(result.features[0].geometry.coordinates[0]);
+            const avgNumberofCrimes = tmp[0]
+            const crimeObjs = tmp[1]
+           
+            console.log("length of crimeObjs = " + crimeObjs.length)
+
+            drawCrimeLocations(crimeObjs, safeCirclesLayer)
+
+            updateRouteColor(avgNumberofCrimes, safeRouteLayer);
+
+           
+        })
+        .catch(err => {
+            console.error('Error fetching route:', err);
+        });
+}
+
+function drawCrimeLocations(crimeObjs, layer){
+
+    for (const crime of crimeObjs){
+        if (crime && crime.location && crime.location.latitude && crime.location.longitude) {
+            L.circleMarker([crime.location.latitude, crime.location.longitude], {
+                stroke: false,      
+                fillColor: '#f03',  
+                fillOpacity: 0.2,   
+                radius: 7
+            }).addTo(layer).bindPopup(`<b>${crime.category}</b><br>${crime.month}`);
+        }
+    }
+}
 
 //Funciton to change the colour of the route based on crime data
 

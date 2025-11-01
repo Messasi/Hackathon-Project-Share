@@ -5,6 +5,7 @@ async function getAvgNumberOfCrimesForCoords(coords, addendant = 300) {
 
     let totalNumOfCrimes = 0
     let waypoints = [];
+    let crimeObjs = [];
     let avgNumOfCrimes = null;
     let meterCounter = 0;
 
@@ -18,13 +19,18 @@ async function getAvgNumberOfCrimesForCoords(coords, addendant = 300) {
 
             let crimes = await getCrimesAtLocation(coords[i+1][1], coords[i+1][0])
             totalNumOfCrimes += crimes.length
-
+            
             waypoints.push(coords[i+1])
+            if (crimes.length > 0){
+                crimeObjs.push(crimes)
+            }
         }
     }
 
     avgNumOfCrimes = totalNumOfCrimes/waypoints.length
     console.log("Average number of crimes along route: ", avgNumOfCrimes)
-    return avgNumOfCrimes
 
+    let result = [avgNumOfCrimes, crimeObjs.flat()]
+
+    return result
 }
