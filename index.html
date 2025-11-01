@@ -24,21 +24,20 @@
         </div>
     </div>
 
-    <div class= "d-flex justify-content-center align-items-center vh-100 mx-auto col-12 col-md-6 col-lg-4 vh-100" style="position:fixed; z-index: 1000;"  id="startEnd">
-		<div class="bg-body shadow-lg p-5 rounded">
+        <div class= "d-flex justify-content-center align-items-center vh-100 mx-auto col-12 col-md-6 col-lg-4 vh-100" style="position:fixed; z-index: 1000;"  id="startEnd">
+        <div class="bg-body shadow-lg p-5 rounded">
             <form class="" id="location-form" onsubmit="onButtonClick();">
-                <div class="mb-3 input-group">
+                <div class="mb-3 input-group" style="position:relative;">
                     <span class="input-group-text">Starting Point</span>
-                    <input type="text" class="form-control rounded-right" id="location" placeholder="Nottingham Trent University, NG11 8PT" name="startPoint" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
+                    <input type="text" class="form-control rounded-right" id="startPoint" placeholder="Nottingham Trent University, NG11 8PT" name="startPoint" required>
+                    <ul id="startPoint-suggestions" class="suggestions-list"></ul>
                 </div>
             </form>
-            <div>
-                <ul id="suggestions"></ul>
-            </div>
             <form class="" id="location-form" onsubmit="onButtonClick();">
-                <div class="mb-3 input-group">
+                <div class="mb-3 input-group" style="position:relative;">
                     <span class="input-group-text">Destination</span>
-                    <input type="text" class="form-control" id="destination" placeholder="London" name="destPoint" required>
+                    <input type="text" class="form-control" id="destPoint" placeholder="London" name="destPoint" required>
+                    <ul id="destPoint-suggestions" class="suggestions-list"></ul>
                 </div>
 
                 <div>  
@@ -47,7 +46,7 @@
 
             </form> 
         </div>
-	</div>
+    </div>
 
 
 

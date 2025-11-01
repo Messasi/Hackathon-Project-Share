@@ -15,12 +15,14 @@
 		<form id="location-form" onsubmit="passOn(event);">
 			<div class="mb-3 input-group">
 				<span class="input-group-text">Starting Point</span>
-				<input type="text" class="form-control rounded-right" id="startPoint" placeholder="Nottingham Trent University, NG11 8PT" name="startPoint" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
+				<input type="text" class="form-control rounded-right" id="startPoint" placeholder="Nottingham Trent University, NG11 8PT" name="startPoint" required>
+				<ul id="startPoint-suggestions" class="suggestions-list"></ul>
 			</div>
 
 			<div class="mb-3 input-group">
 				<span class="input-group-text">Destination</span>
 				<input type="text" class="form-control" id="destPoint" placeholder="London" name="destPoint" required>
+				<ul id="destPoint-suggestions" class="suggestions-list"></ul>
 			</div>
 
 			<div class="d-flex justify-content-center align-items-center">

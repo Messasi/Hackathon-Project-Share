@@ -80,6 +80,10 @@ button:hover{
     padding: 6px 0;
     z-index: 2000;
     box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+    /* start hidden by default so empty boxes do not appear after reload */
+    display: none;
+    opacity: 0;
+    transition: opacity 150ms ease-in-out;
 }
 
 .suggestion-item {
@@ -88,4 +92,10 @@ button:hover{
 }
 .suggestion-item:hover {
     background: #f1f1f1;
+}
+
+/* when JS shows the list it should set display:block and then opacity to 1; helper class */
+.suggestions-list.visible {
+    display: block;
+    opacity: 1;
 }

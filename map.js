@@ -20,6 +20,15 @@ const myAPIKey = "a941066835354227943419eb425fff6a";
 const inputSelectors = ['#startPoint', '#destPoint', '#location', '#destination'];
 const inputs = Array.from(document.querySelectorAll(inputSelectors.join(',')));
 
+// ensure any existing suggestion ULs are hidden on initial load (covers explicit ULs in HTML)
+inputs.forEach(i => {
+    if (!i.id) return;
+    const existing = document.getElementById(`${i.id}-suggestions`);
+    if (existing) {
+        existing.classList.remove('visible');
+    }
+});
+
 let startMarker = null;
 let destMarker = null;
 let routeLayer = null;
@@ -80,6 +89,11 @@ function getOrCreateSuggestionsEl(inputEl) {
     el = document.createElement('ul');
     el.id = sugId;
     el.className = 'suggestions-list';
+    // start hidden; visibility is controlled by the CSS .visible class
+    // track temporary suppression so clicks inside the list survive input blur
+    el._suppressHide = false;
+    el.addEventListener('mousedown', () => { el._suppressHide = true; });
+    el.addEventListener('mouseup', () => { setTimeout(() => { el._suppressHide = false; }, 0); });
     const parent = inputEl.parentElement || inputEl.parentNode;
     if (parent && window.getComputedStyle(parent).position === 'static') {
         parent.style.position = 'relative';
@@ -109,6 +123,9 @@ async function fetchLocationSuggestions(query, inputEl) {
     const suggestionsEl = getOrCreateSuggestionsEl(inputEl);
     if (!query || !query.trim()) {
         suggestionsEl.innerHTML = '';
+        suggestionsEl.classList.remove('visible');
+        // clear any stored coordinates because there's no selected suggestion
+        try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
         return;
     }
 
@@ -125,9 +142,19 @@ async function fetchLocationSuggestions(query, inputEl) {
             return `<li class="suggestion-item" data-lat="${lat}" data-lon="${lon}" data-formatted="${escapeHtml(formatted)}">${escapeHtml(formatted)}</li>`;
         });
         suggestionsEl.innerHTML = items.join('') || '<li class="suggestion-item">No results</li>';
+        if (!items.length) {
+            // no results -> clear any stored coordinates so old coords aren't used
+            try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
+            suggestionsEl.classList.remove('visible');
+        } else {
+            // show suggestions now that we have results
+            suggestionsEl.classList.add('visible');
+        }
 
         suggestionsEl.querySelectorAll('.suggestion-item').forEach(li => {
-            li.addEventListener('click', () => {
+            // use mousedown rather than click to ensure selection before blur handlers run
+            li.addEventListener('mousedown', (ev) => {
+                ev.preventDefault();
                 const formatted = li.getAttribute('data-formatted');
                 const lat = li.getAttribute('data-lat');
                 const lon = li.getAttribute('data-lon');
@@ -135,12 +162,15 @@ async function fetchLocationSuggestions(query, inputEl) {
                 inputEl.dataset.lat = lat;
                 inputEl.dataset.lon = lon;
                 suggestionsEl.innerHTML = '';
+                suggestionsEl.classList.remove('visible');
                 addOrUpdateMarker(lat, lon, inputEl, formatted);
             });
         });
     } catch (err) {
         console.error('Suggestion fetch error:', err);
-        suggestionsEl.innerHTML = '<li class="suggestion-item">Error fetching results</li>';
+            suggestionsEl.innerHTML = '<li class="suggestion-item">Error fetching results</li>';
+            suggestionsEl.classList.remove('visible');
+        try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
     }
 }
 
@@ -148,11 +178,30 @@ async function fetchLocationSuggestions(query, inputEl) {
 const debouncedFetch = debounce(fetchLocationSuggestions, 300);
 inputs.forEach(inputEl => {
     if (!inputEl.id) return;
+    const suggestionsEl = getOrCreateSuggestionsEl(inputEl);
+
     inputEl.addEventListener('input', (e) => {
         debouncedFetch(e.target.value, inputEl);
     });
+
     inputEl.addEventListener('focus', (e) => {
+        // show or fetch suggestions when the input gains focus
         if (e.target.value) debouncedFetch(e.target.value, inputEl);
+        else if (suggestionsEl && suggestionsEl.innerHTML.trim()) {
+            suggestionsEl.classList.add('visible');
+        }
+    });
+
+    inputEl.addEventListener('blur', (e) => {
+        // delay hiding to allow mousedown on suggestion to run first
+        setTimeout(() => {
+            if (suggestionsEl && suggestionsEl._suppressHide) {
+                // a click inside the suggestions is happening; keep it open briefly
+                suggestionsEl._suppressHide = false;
+                return;
+            }
+            if (suggestionsEl) suggestionsEl.classList.remove('visible');
+        }, 150);
     });
 });
 

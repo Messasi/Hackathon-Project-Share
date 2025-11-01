@@ -16,14 +16,14 @@
                 <form class="bg-body rounded p-3 shadow-lg" id="location-form" onsubmit="passOn(event);">
                     <div class="input-group">
                         <span class="input-group-text">Starting Point</span>
-                        <input type="text" class="form-control rounded-right" id="startPoint" placeholder="Nottingham Trent University, NG11 8PT" name="startPoint" pattern="[a-z0-9._%+-]+@[a-z0-VT-9.-]+\.[a-z]{2,}$" required>
-                        <!-- add the suggestions mechanic here-->
+                        <input type="text" class="form-control rounded-right" id="startPoint" placeholder="Nottingham Trent University, NG11 8PT" name="startPoint" required>
+                        <ul id="startPoint-suggestions" class="suggestions-list"></ul>
                     </div>
 
                     <div class="mb-3 input-group">
                         <span class="input-group-text">Destination&nbsp;&nbsp;&nbsp;&nbsp;</span>
                         <input type="text" class="form-control" id="destPoint" placeholder="London" name="destPoint" required>
-                        <!-- add the suggestions mechanic here-->
+                        <ul id="destPoint-suggestions" class="suggestions-list"></ul>
                     </div>
                     <div class="d-flex justify-content-center align-items-center">
                         <button type="submit" class="btn btn-primary mx-auto rounded-corners shadow-lg mb-3">Submit</button>
