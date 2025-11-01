@@ -65,3 +65,120 @@ button:hover{
 }
 
 #map { height: 70%; width: 100%;}
+
+.visibility-toggle {
+    display:none !important;
+}
+
+/* Make the legend hide rule more specific so Bootstrap's utility classes (e.g. .d-flex)
+   which may include !important do not override it. Target by ID + class to increase
+   specificity. */
+#legend.visibility-toggle {
+    display: none !important;
+}
+
+/* Make the start/destination overlay hide rule similarly specific so Bootstrap's
+   utility classes (e.g. .d-flex) won't override it. */
+#startEnd.visibility-toggle {
+    display: none !important;
+}
+
+/* Back button circle styling */
+#backBtn {
+    /* Responsive circular back button
+       - width/height use clamp(min, preferred, max) so the button scales with viewport
+       - rem units keep scaling consistent with user's font-size preferences
+       - font-size scales similarly so the arrow stays proportional */
+    width: clamp(2.5rem, 4.0vw, 4rem);
+    height: clamp(2.5rem, 4.0vw, 4rem);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: clamp(1rem, 1.6vw, 1.6rem);
+    line-height: 1;
+}
+
+.suggestions-list {
+    position: absolute;
+    margin-top: 6px;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    list-style: none;
+    padding: 6px 0;
+    z-index: 2000;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+    /* start hidden by default so empty boxes do not appear after reload */
+    display: none;
+    opacity: 0;
+    transition: opacity 150ms ease-in-out;
+}
+
+.suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.suggestion-item:hover {
+    background: #f1f1f1;
+}
+
+/* when JS shows the list it should set display:block and then opacity to 1; helper class */
+.suggestions-list.visible {
+    display: block;
+    opacity: 1;
+}
+
+/* Make the mode checkboxes compact and limit their max width so they don't stretch full-width */
+
+#modeControls {
+    /* stack label above controls */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: clamp(18rem, 45vw, 36rem); /* responsive max width */
+}
+
+/* mode-group holds the radio buttons on a single row (wraps on small screens) */
+.mode-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+}
+
+#modeControls .form-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0; /* remove default vertical spacing so they sit compact */
+}
+
+/* make labels for the small controls take only needed space */
+#modeControls .form-check-label {
+    white-space: nowrap;
+}
+
+/* Ensure radio inputs keep their native circular appearance and reasonable size
+   (override any accidental inherited input sizing). */
+#modeControls .form-check-input {
+    /* set to typical radio size but responsive */
+    width: 1.15em;
+    height: 1.15em;
+    padding: 0;
+    margin: 0;
+    vertical-align: middle;
+    -webkit-appearance: radio;
+    appearance: radio;
+    border-radius: 50%;
+}
+
+/* Keep label text next to the radio and prevent overflow */
+#modeControls .form-check {
+    min-width: 0;
+}

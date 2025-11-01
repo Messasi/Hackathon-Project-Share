@@ -2,6 +2,9 @@
 
 //Funciton to change the colour of the route based on crime data
 
+//Createing the map
+
+//Function to change the colour of the route based on crime data
 
 var map = L.map('map').setView([51.505, -0.09], 17);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -10,8 +13,6 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 
-
-//Autofill location 
 // const myAPIKey = "a941066835354227943419eb425fff6a";
 const myAPIKey = "ad3d896b9b544b6a99f430b985dd0406"
 const locationInput = document.getElementById("location");
@@ -21,6 +22,22 @@ const suggestions = document.getElementById("suggestions");
 const avoidCrimes = false;
 
 let activeInput = null;
+
+//Autofill location 
+// const myAPIKey = "a941066835354227943419eb425fff6a";
+// support both sets of ids: overlay (startPoint/destPoint) and header (location/destination)
+const inputSelectors = ['#startPoint', '#destPoint', '#location', '#destination'];
+const inputs = Array.from(document.querySelectorAll(inputSelectors.join(',')));
+
+// ensure any existing suggestion ULs are hidden on initial load (covers explicit ULs in HTML)
+inputs.forEach(i => {
+    if (!i.id) return;
+    const existing = document.getElementById(`${i.id}-suggestions`);
+    if (existing) {
+        existing.classList.remove('visible');
+    }
+});
+
 let startMarker = null;
 let destMarker = null;
 let routeLayer = null;
@@ -29,25 +46,38 @@ let circlesLayer = L.layerGroup().addTo(map);
 let safeCirclesLayer = L.layerGroup().addTo(map);
 
 // helper to add or update a marker for start/destination inputs
-function addOrUpdateMarker(lat, lon, inputId, label) {
+function roleFromId(id) {
+    if (!id) return null;
+    const lower = id.toLowerCase();
+    if (lower.includes('start') || lower === 'location') return 'start';
+    if (lower.includes('dest') || lower === 'destination') return 'destination';
+    return null;
+}
+
+function addOrUpdateMarker(lat, lon, inputEl, label) {
+    if (!lat || !lon) return null;
     const latNum = parseFloat(lat);
     const lonNum = parseFloat(lon);
     if (Number.isNaN(latNum) || Number.isNaN(lonNum)) return null;
 
-    // choose which marker to update
-    if (inputId === 'location') {
+    const role = roleFromId(inputEl.id);
+
+    if (role === 'start') {
         if (startMarker) {
-            map.removeLayer(startMarker);
+            startMarker.setLatLng([latNum, lonNum]);
+            startMarker.setPopupContent(label || 'Start');
+        } else {
+            startMarker = L.marker([latNum, lonNum]).addTo(map).bindPopup(label || 'Start').openPopup();
         }
-        startMarker = L.marker([latNum, lonNum]).addTo(map).bindPopup(label || 'Start').openPopup();
         map.setView([latNum, lonNum], Math.max(map.getZoom(), 13));
         return startMarker;
-    } else if (inputId === 'destination') {
+    } else if (role === 'destination') {
         if (destMarker) {
-            map.removeLayer(destMarker);
+            destMarker.setLatLng([latNum, lonNum]);
+            destMarker.setPopupContent(label || 'Destination');
+        } else {
+            destMarker = L.marker([latNum, lonNum]).addTo(map).bindPopup(label || 'Destination').openPopup();
         }
-        destMarker = L.marker([latNum, lonNum]).addTo(map).bindPopup(label || 'Destination').openPopup();
-        map.setView([latNum, lonNum], Math.max(map.getZoom(), 13));
         return destMarker;
     }
     return null;
@@ -55,7 +85,6 @@ function addOrUpdateMarker(lat, lon, inputId, label) {
 
 //de bounce functinon
 function debounce(func, delay) {
-
     let timeout;
     return function(...args) { 
         clearTimeout(timeout);
@@ -63,41 +92,97 @@ function debounce(func, delay) {
     }
 }
 
-//function to fetch location/destination suggestions
-async function fetchLocationSuggestions(query, inputElement) {
-    activeInput = inputElement;
-    if (query) {
-        suggestions.innerHTML = "";
-        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&limit=5&apiKey=${myAPIKey}`;
-        const response = await fetch(url);
-        const data = await response.json();
+// create/return suggestions <ul> for an input element
+function getOrCreateSuggestionsEl(inputEl) {
+    const sugId = `${inputEl.id}-suggestions`;
+    let el = document.getElementById(sugId);
+    if (el) return el;
 
-        suggestions.innerHTML = data.features.map(feature => `
-            <li class="suggestion-item" data-lat="${feature.properties.lat}" data-lon="${feature.properties.lon}" data-formatted="${feature.properties.formatted}">
-                ${feature.properties.formatted}
-            </li>
-        `).join("");
+    el = document.createElement('ul');
+    el.id = sugId;
+    el.className = 'suggestions-list';
+    // start hidden; visibility is controlled by the CSS .visible class
+    // track temporary suppression so clicks inside the list survive input blur
+    el._suppressHide = false;
+    el.addEventListener('mousedown', () => { el._suppressHide = true; });
+    el.addEventListener('mouseup', () => { setTimeout(() => { el._suppressHide = false; }, 0); });
+    const parent = inputEl.parentElement || inputEl.parentNode;
+    if (parent && window.getComputedStyle(parent).position === 'static') {
+        parent.style.position = 'relative';
+    }
+    if (inputEl.nextSibling) parent.insertBefore(el, inputEl.nextSibling);
+    else parent.appendChild(el);
 
-        suggestions.querySelectorAll('.suggestion-item').forEach(li => {
-            li.addEventListener('click', () => {
+    return el;
+}
+
+// close all suggestion lists
+function clearAllSuggestions() {
+    inputs.forEach(i => {
+        if (!i.id) return;
+        const el = document.getElementById(`${i.id}-suggestions`);
+        if (el) el.innerHTML = '';
+    });
+}
+
+// small helper to escape displayed text
+function escapeHtml(str) {
+    return String(str).replace(/[&<>\"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[s]));
+}
+
+// fetch suggestions and render into per-input suggestions UL
+async function fetchLocationSuggestions(query, inputEl) {
+    const suggestionsEl = getOrCreateSuggestionsEl(inputEl);
+    if (!query || !query.trim()) {
+        suggestionsEl.innerHTML = '';
+        suggestionsEl.classList.remove('visible');
+        // clear any stored coordinates because there's no selected suggestion
+        try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
+        return;
+    }
+
+    suggestionsEl.innerHTML = '<li class="suggestion-item">Loading…</li>';
+    try {
+        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&limit=6&apiKey=${myAPIKey}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Network response not ok');
+        const data = await res.json();
+        const items = (data.features || []).map(f => {
+            const formatted = f.properties.formatted || '';
+            const lat = f.properties.lat;
+            const lon = f.properties.lon;
+            return `<li class="suggestion-item" data-lat="${lat}" data-lon="${lon}" data-formatted="${escapeHtml(formatted)}">${escapeHtml(formatted)}</li>`;
+        });
+        suggestionsEl.innerHTML = items.join('') || '<li class="suggestion-item">No results</li>';
+        if (!items.length) {
+            // no results -> clear any stored coordinates so old coords aren't used
+            try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
+            suggestionsEl.classList.remove('visible');
+        } else {
+            // show suggestions now that we have results
+            suggestionsEl.classList.add('visible');
+        }
+
+        suggestionsEl.querySelectorAll('.suggestion-item').forEach(li => {
+            // use mousedown rather than click to ensure selection before blur handlers run
+            li.addEventListener('mousedown', (ev) => {
+                ev.preventDefault();
                 const formatted = li.getAttribute('data-formatted');
                 const lat = li.getAttribute('data-lat');
                 const lon = li.getAttribute('data-lon');
-                // fill the input and clear suggestions
-                activeInput.value = formatted;
-
-
-                // store coordinates on the input element for later use
-                activeInput.dataset.lat = lat;
-                activeInput.dataset.lon = lon;
-                suggestions.innerHTML = "";
-                // add/update marker on the map for the active input
-                addOrUpdateMarker(lat, lon, activeInput.id, formatted);
-                console.log("Selected:", formatted, "Latitude:", lat, "Longitude:", lon);
+                inputEl.value = formatted;
+                inputEl.dataset.lat = lat;
+                inputEl.dataset.lon = lon;
+                suggestionsEl.innerHTML = '';
+                suggestionsEl.classList.remove('visible');
+                addOrUpdateMarker(lat, lon, inputEl, formatted);
             });
         });
-    } else {
-        suggestions.innerHTML = "";
+    } catch (err) {
+        console.error('Suggestion fetch error:', err);
+            suggestionsEl.innerHTML = '<li class="suggestion-item">Error fetching results</li>';
+            suggestionsEl.classList.remove('visible');
+        try { delete inputEl.dataset.lat; delete inputEl.dataset.lon; } catch (e) {}
     }
 }
 
@@ -108,10 +193,22 @@ locationInput.addEventListener('input', debounce((e) => {
     fetchLocationSuggestions(e.target.value, locationInput);
 }, 300));
 
-//Add event listener with debounce for destination
-destinationInput.addEventListener('input', debounce((e) => {
-    fetchLocationSuggestions(e.target.value, destinationInput);
-}, 300));
+// attach listeners to all found inputs
+const debouncedFetch = debounce(fetchLocationSuggestions, 300);
+inputs.forEach(inputEl => {
+    if (!inputEl.id) return;
+    const suggestionsEl = getOrCreateSuggestionsEl(inputEl);
+
+    inputEl.addEventListener('input', (e) => {
+        debouncedFetch(e.target.value, inputEl);
+    });
+    inputEl.addEventListener('focus', (e) => {
+        // show or fetch suggestions when the input gains focus
+        if (e.target.value) debouncedFetch(e.target.value, inputEl);
+        else if (suggestionsEl && suggestionsEl.innerHTML.trim()) {
+            suggestionsEl.classList.add('visible');
+        }}
+    )})
 
 
 //Creat a marker
@@ -215,7 +312,37 @@ function updateRouteColor(avgNumberofCrimes, layer) {
             l.setStyle({ color: colour });
         }
     });
+
+    inputEl.addEventListener('blur', (e) => {
+        // delay hiding to allow mousedown on suggestion to run first
+        setTimeout(() => {
+            if (suggestionsEl && suggestionsEl._suppressHide) {
+                // a click inside the suggestions is happening; keep it open briefly
+                suggestionsEl._suppressHide = false;
+                return;
+            }
+            if (suggestionsEl) suggestionsEl.classList.remove('visible');
+        }, 150);
+    });
 }
+}
+};
+
+// close when clicking outside any suggestions / inputs
+document.addEventListener('click', (e) => {
+    const clickedInside = inputs.some(i => {
+        if (!i.id) return false;
+        const sug = document.getElementById(`${i.id}-suggestions`);
+        return i.contains(e.target) || (sug && sug.contains(e.target));
+    });
+    if (!clickedInside) clearAllSuggestions();
+});
+
+// helper to find preferred input value/dataset (prefer startPoint/destPoint over location/destination)
+function findInputPair() {
+    const startEl = document.getElementById('startPoint') || document.getElementById('location');
+    const destEl = document.getElementById('destPoint') || document.getElementById('destination');
+    return { startEl, destEl };
 }
 
 function avoidCrimeSection(crimeObjs){
@@ -289,6 +416,8 @@ function avoidCrimeSection(crimeObjs){
             console.error('Error fetching route:', err);
         });
 }
+async function onButtonClick(e) {
+    if (e && e.preventDefault) e.preventDefault();
 
 function drawCrimeLocations(crimeObjs, layer){
 
@@ -304,23 +433,145 @@ function drawCrimeLocations(crimeObjs, layer){
     }
 }
 
-//Funciton to change the colour of the route based on crime data
+    const { startEl, destEl } = findInputPair();
+    if (!startEl || !destEl) {
+        alert('Start or destination input not found.');
+        return;
+    }
 
-function getRouteColor(avgNumberofCrimes) {
-    if (avgNumberofCrimes === 0) {
-        return 'rgba(17, 255, 0, 0.7)'; // Green
-    } else if (avgNumberofCrimes < 3) {
-        return 'rgba(238, 255, 0, 0.7)'; // Yellow
-    } else if (avgNumberofCrimes < 6) {
-        return 'rgba(255, 157, 0, 0.7)'; // Orange
-    } else if (avgNumberofCrimes < 9) {
-        return 'rgba(255, 100, 0, 0.7)'; // Dark Orange
-    } else {
-        return 'rgba(255, 55, 0, 0.7)'; // Red
+    var legend = document.getElementById("legend");
+    if (legend) {
+        // remove the CSS class if present (keeps backward compatibility)
+        if (legend.classList && legend.classList.contains("visibility-toggle")) {
+            legend.classList.remove("visibility-toggle");
+        }
+        // remove any hidden attribute so the legend becomes visible
+        try { legend.hidden = false; } catch (e) { /* ignore if not writable */ }
+    }
+
+    // hide the input/start-destination overlay so the map and legend can take focus
+    var startEnd = document.getElementById('startEnd');
+    if (startEnd) {
+        try {
+            // add the visibility class (CSS will ensure it's hidden even with Bootstrap)
+            if (startEnd.classList && !startEnd.classList.contains('visibility-toggle')) {
+                startEnd.classList.add('visibility-toggle');
+            }
+            // also set the hidden attribute as a DOM-level guard
+            startEnd.hidden = true;
+        } catch (e) {
+            // best-effort: if setting hidden fails, leave it — nothing fatal
+            console.warn('Could not hide startEnd overlay', e);
+        }
+    }
+
+    // show the Back button (top-left) so the user can return to the input overlay
+    var backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+        try { backBtn.hidden = false; } catch (e) { /* ignore */ }
+    }
+
+    // Read transport mode checkboxes. The UI uses checkboxes but only one should be selected
+    // (we enforce that via JS listeners added below). Default to driving.
+    let mode = 'drive';
+    try {
+        const driving = document.getElementById('modeDriving');
+        const walking = document.getElementById('modeWalking');
+        if (walking && walking.checked) mode = 'foot';
+        else if (driving && driving.checked) mode = 'drive';
+    } catch (err) { console.warn('Could not read mode controls', err); }
+
+    // Read 'only green' preference
+    let onlyGreen = false;
+    try { const g = document.getElementById('onlyGreen'); if (g && g.checked) onlyGreen = true; } catch (e) {}
+
+    const sLat = startEl.dataset.lat;
+    const sLon = startEl.dataset.lon;
+    const dLat = destEl.dataset.lat;
+    const dLon = destEl.dataset.lon;
+
+    if (!sLat || !sLon) { alert('Please choose a start location from suggestions.'); return; }
+    if (!dLat || !dLon) { alert('Please choose a destination from suggestions.'); return; }
+
+    addOrUpdateMarker(sLat, sLon, startEl, startEl.value || 'Start');
+    addOrUpdateMarker(dLat, dLon, destEl, destEl.value || 'Destination');
+
+    const fromWaypoint = [sLat, sLon];
+    const toWaypoint = [dLat, dLon];
+    // Use selected transport mode for routing request. If 'pt' is selected and the API
+    // doesn't support it, the request may fail — fallback behavior could be added later.
+    const url = `https://api.geoapify.com/v1/routing?waypoints=${fromWaypoint.join(',')}|${toWaypoint.join(',')}&mode=${encodeURIComponent(mode)}&format=geojson&apiKey=${myAPIKey}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Routing request failed');
+        const geojson = await res.json();
+        if (routeLayer) map.removeLayer(routeLayer);
+        // If user requested "only green" preferencing, draw route in green color.
+        // NOTE: this does not re-route around non-green segments; implementing
+        // route-avoidance requires analyzing segment crime scores and requesting
+        // alternate routes from the routing provider.
+        const routeColor = onlyGreen ? getRouteColor(0) : '#3388ff';
+        routeLayer = L.geoJSON(geojson, {
+            style: { color: routeColor, weight: 6, opacity: 0.8 }
+        }).addTo(map);
+        map.fitBounds(routeLayer.getBounds(), { padding: [50,50] });
+    } catch (err) {
+        console.error('Routing error:', err);
+        alert('Error fetching route.');
     }
 }
-    
 
+// expose onButtonClick globally if index.html expects that name
+window.onButtonClick = onButtonClick;
+
+// called when the user clicks the Back button in the top-left
+function onBackClick(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    var legend = document.getElementById('legend');
+    if (legend) {
+        // hide legend again
+        try {
+            if (legend.classList && !legend.classList.contains('visibility-toggle')) {
+                legend.classList.add('visibility-toggle');
+            }
+            legend.hidden = true;
+        } catch (err) { /* ignore */ }
+    }
+
+    var startEnd = document.getElementById('startEnd');
+    if (startEnd) {
+        try {
+            // show the overlay
+            if (startEnd.classList && startEnd.classList.contains('visibility-toggle')) {
+                startEnd.classList.remove('visibility-toggle');
+            }
+            startEnd.hidden = false;
+        } catch (err) { /* ignore */ }
+    }
+
+    var backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+        try { backBtn.hidden = true; } catch (e) { /* ignore */ }
+    }
+}
+
+window.onBackClick = onBackClick;
+
+// helper: get color based on avg crime (kept from previous file if used elsewhere)
+function getRouteColor(avgNumberofCrimes) {
+    if (avgNumberofCrimes < 2) {
+        return 'rgba(17, 255, 0, 0.7)'; // Green
+    } else if (avgNumberofCrimes < 3) {
+        return 'rgba(255, 255, 36, 0.94)'; // Yellow
+    } else if (avgNumberofCrimes < 5) {
+        return 'rgba(255, 172, 39, 1)'; // Orange
+    } else if (avgNumberofCrimes < 7) {
+        return 'rgba(222, 96, 33, 0.8)'; // Dark Orange
+    } else {
+        return 'rgba(255, 0, 0, 1)'; // Red
+    }
 }
 
 

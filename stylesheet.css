@@ -1,0 +1,24 @@
+.bg-image {
+    position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-image: url('images/london-map-wikipedia.svg');
+	background-size: cover;
+	background-position: center;
+	filter: blur(10px);
+	z-index: -1;
+}
+
+.bg-image-unblurred {
+    position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-image: url('images/london-map-wikipedia.svg');
+	background-size: cover;
+	background-position: center;
+	z-index: -1;
+}
